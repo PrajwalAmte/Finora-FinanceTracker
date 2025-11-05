@@ -5,6 +5,8 @@ import com.finance_tracker.service.InvestmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,9 +14,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/investments")
+@RequiredArgsConstructor
 public class InvestmentController {
-    @Autowired
-    private InvestmentService investmentService;
+    private final InvestmentService investmentService;
 
     @GetMapping
     public List<Investment> getAllInvestments() {
@@ -29,12 +31,12 @@ public class InvestmentController {
     }
 
     @PostMapping
-    public Investment createInvestment(@RequestBody Investment investment) {
+    public Investment createInvestment(@Valid @RequestBody Investment investment) {
         return investmentService.saveInvestment(investment);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Investment> updateInvestment(@PathVariable Long id, @RequestBody Investment investment) {
+    public ResponseEntity<Investment> updateInvestment(@PathVariable Long id, @Valid @RequestBody Investment investment) {
         return investmentService.getInvestmentById(id)
                 .map(existingInvestment -> {
                     investment.setId(id);

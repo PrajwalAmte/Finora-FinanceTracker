@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -24,11 +26,11 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@RequiredArgsConstructor
 public class SipService {
     private static final Logger logger = LoggerFactory.getLogger(SipService.class);
 
-    @Autowired
-    private SipRepository sipRepository;
+    private final SipRepository sipRepository;
 
     // Cache NAV data to reduce API calls
     private Map<String, BigDecimal> navCache = new ConcurrentHashMap<>();
@@ -79,6 +81,7 @@ public class SipService {
     }
 
     // Method to update SIP NAVs (called by the scheduler)
+    @Transactional
     public void updateCurrentNavs() {
         logger.info("Starting NAV update for all SIPs");
 
@@ -128,6 +131,7 @@ public class SipService {
     }
 
     // Method to simulate monthly SIP investment (called by the scheduler)
+    @Transactional
     public void processMonthlyInvestments() {
         logger.info("Processing monthly SIP investments");
         LocalDate today = LocalDate.now();

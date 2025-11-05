@@ -2,6 +2,7 @@ package com.finance_tracker.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,12 +15,25 @@ public class Sip {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     private String name;
+
+    @NotBlank
     private String schemeCode;
+
+    @Digits(integer = 17, fraction = 2)
+    @DecimalMin(value = "0.0", inclusive = false)
+    @Column(precision = 19, scale = 2)
     private BigDecimal monthlyAmount;
     private LocalDate startDate;
     private Integer durationMonths;
+
+    @Digits(integer = 13, fraction = 6)
+    @Column(precision = 19, scale = 6)
     private BigDecimal currentNav;
+
+    @Digits(integer = 16, fraction = 8)
+    @Column(precision = 24, scale = 8)
     private BigDecimal totalUnits;
     private LocalDate lastUpdated;
     private LocalDate lastInvestmentDate;

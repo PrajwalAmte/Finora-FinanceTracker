@@ -39,6 +39,17 @@ export const SipForm: React.FC<SipFormProps> = ({
         currentNav: initialData.currentNav.toString(),
         totalUnits: initialData.totalUnits.toString(),
       });
+    } else {
+      // Reset form to defaults when no initial data (for create mode)
+      setFormData({
+        name: '',
+        schemeCode: '',
+        monthlyAmount: '',
+        startDate: new Date().toISOString().split('T')[0],
+        durationMonths: '',
+        currentNav: '',
+        totalUnits: '',
+      });
     }
   }, [initialData]);
 

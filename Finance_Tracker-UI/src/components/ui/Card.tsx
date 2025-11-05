@@ -41,7 +41,7 @@ export const Card: React.FC<CardProps> = ({
         <div 
           className={twMerge(
             'flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-700',
-            onHeaderClick && 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-750',
+            onHeaderClick && 'cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700',
             headerClassName
           )}
           onClick={onHeaderClick}
@@ -67,7 +67,7 @@ export const Card: React.FC<CardProps> = ({
       </div>
       
       {footer && (
-        <div className={twMerge('px-5 py-4 bg-neutral-50 border-t border-neutral-200 dark:bg-neutral-850 dark:border-neutral-700', footerClassName)}>
+        <div className={twMerge('px-5 py-4 bg-neutral-50 border-t border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700', footerClassName)}>
           {footer}
         </div>
       )}

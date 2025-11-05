@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center space-x-2">
             <DollarSign className="text-primary-600 dark:text-primary-500" />
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-white">Finance Tracker</h1>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-white">Finora</h1>
           </div>
           <button 
             className="md:hidden p-2 rounded-md text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-neutral-800"
@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
         </nav>
         
         <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">© 2025 Finance Tracker</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">© 2025 Finora</p>
           <ThemeToggle />
         </div>
       </aside>

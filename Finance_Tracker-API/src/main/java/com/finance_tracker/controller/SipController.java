@@ -5,6 +5,8 @@ import com.finance_tracker.service.SipService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,9 +14,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sips")
+@RequiredArgsConstructor
 public class SipController {
-    @Autowired
-    private SipService sipService;
+    private final SipService sipService;
 
     @GetMapping
     public List<Sip> getAllSips() {
@@ -29,12 +31,12 @@ public class SipController {
     }
 
     @PostMapping
-    public Sip createSip(@RequestBody Sip sip) {
+    public Sip createSip(@Valid @RequestBody Sip sip) {
         return sipService.saveSip(sip);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Sip> updateSip(@PathVariable Long id, @RequestBody Sip sip) {
+    public ResponseEntity<Sip> updateSip(@PathVariable Long id, @Valid @RequestBody Sip sip) {
         return sipService.getSipById(id)
                 .map(existingSip -> {
                     sip.setId(id);

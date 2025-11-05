@@ -4,6 +4,8 @@ import com.finance_tracker.model.Expense;
 import com.finance_tracker.repository.ExpenseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,9 +15,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ExpenseService {
-    @Autowired
-    private ExpenseRepository expenseRepository;
+    private final ExpenseRepository expenseRepository;
 
     public List<Expense> getAllExpenses() {
         return expenseRepository.findAll();
@@ -79,6 +81,6 @@ public class ExpenseService {
                 .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return total.divide(new BigDecimal("6"), 2, BigDecimal.ROUND_HALF_UP);
+        return total.divide(new BigDecimal("6"), 2, java.math.RoundingMode.HALF_UP);
     }
 }

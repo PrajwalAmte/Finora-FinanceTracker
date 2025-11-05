@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.net.URI;
@@ -22,11 +24,11 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@RequiredArgsConstructor
 public class InvestmentService {
     private static final Logger logger = LoggerFactory.getLogger(InvestmentService.class);
 
-    @Autowired
-    private InvestmentRepository investmentRepository;
+    private final InvestmentRepository investmentRepository;
 
     @Value("${twelvedata.api.key:}")
     private String twelveDataApiKey;
@@ -75,6 +77,7 @@ public class InvestmentService {
     }
 
     // Method to update investment prices (called by the scheduler)
+    @Transactional
     public void updateCurrentPrices() {
         logger.info("Starting price update for all investments");
         List<Investment> investments = getAllInvestments();
@@ -85,7 +88,7 @@ public class InvestmentService {
             try {
                 BigDecimal currentPrice = null;
                 String symbol = investment.getSymbol();
-                String type = investment.getType();
+                com.finance_tracker.model.InvestmentType type = investment.getType();
 
                 // First try Yahoo Finance
                 try {
@@ -142,7 +145,7 @@ public class InvestmentService {
     // Fetch current price using Yahoo Finance
     private static final int MAX_RETRIES = 3;
 
-    private BigDecimal fetchYahooFinancePrice(String symbol, String type) {
+    private BigDecimal fetchYahooFinancePrice(String symbol, com.finance_tracker.model.InvestmentType type) {
         int attempt = 0;
         long backoff = 3000;
 
@@ -208,7 +211,7 @@ public class InvestmentService {
     }
 
     // Fetch current price using Twelve Data API
-    private BigDecimal fetchTwelveDataPrice(String symbol, String type) {
+    private BigDecimal fetchTwelveDataPrice(String symbol, com.finance_tracker.model.InvestmentType type) {
         if (twelveDataApiKey == null || twelveDataApiKey.isEmpty()) {
             logger.error("Twelve Data API key is not configured");
             return null;

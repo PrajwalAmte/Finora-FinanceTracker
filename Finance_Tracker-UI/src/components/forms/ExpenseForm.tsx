@@ -3,6 +3,8 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Expense } from '../../types/Expense';
+import { toast } from '../../utils/notifications';
+import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../../constants';
 
 interface ExpenseFormProps {
   onSubmit: (data: any) => void;
@@ -12,14 +14,7 @@ interface ExpenseFormProps {
   mode?: 'create' | 'edit';
 }
 
-const PAYMENT_METHODS = [
-  'Cash', 'Credit Card', 'Debit Card', 'UPI', 'Net Banking', 'Wallet', 'Other'
-];
-
-const EXPENSE_CATEGORIES = [
-  'Food', 'Groceries', 'Transportation', 'Entertainment', 'Shopping', 
-  'Utilities', 'Rent', 'Health', 'Travel', 'Education', 'Miscellaneous'
-];
+// constants moved to shared constants.ts
 
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onSubmit,
@@ -32,8 +27,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
-    category: '',
-    paymentMethod: '',
+    category: EXPENSE_CATEGORIES[0] || '', // Default to first category (Food)
+    paymentMethod: PAYMENT_METHODS[0] || '', // Default to first payment method (Cash)
   });
 
   useEffect(() => {
@@ -45,14 +40,32 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
         category: initialData.category,
         paymentMethod: initialData.paymentMethod,
       });
+    } else {
+      // Reset form to defaults when no initial data (for create mode)
+      setFormData({
+        description: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        category: EXPENSE_CATEGORIES[0] || '',
+        paymentMethod: PAYMENT_METHODS[0] || '',
+      });
     }
   }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const amountNum = parseFloat(formData.amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error('Amount must be a positive number');
+      return;
+    }
+    if (!formData.category || !formData.paymentMethod) {
+      toast.error('Please select category and payment method');
+      return;
+    }
     onSubmit({
       ...formData,
-      amount: parseFloat(formData.amount),
+      amount: amountNum,
     });
   };
 

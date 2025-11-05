@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,9 +16,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/expenses")
+@RequiredArgsConstructor
 public class ExpenseController {
-    @Autowired
-    private ExpenseService expenseService;
+    private final ExpenseService expenseService;
 
     @GetMapping
     public List<Expense> getAllExpenses() {
@@ -31,12 +33,12 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public Expense createExpense(@RequestBody Expense expense) {
+    public Expense createExpense(@Valid @RequestBody Expense expense) {
         return expenseService.saveExpense(expense);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Expense> updateExpense(@PathVariable Long id, @RequestBody Expense expense) {
+    public ResponseEntity<Expense> updateExpense(@PathVariable Long id, @Valid @RequestBody Expense expense) {
         return expenseService.getExpenseById(id)
                 .map(existingExpense -> {
                     expense.setId(id);

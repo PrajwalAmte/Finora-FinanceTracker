@@ -12,6 +12,7 @@ import { investmentApi } from '../api/investmentApi';
 import { formatCurrency, formatDate, formatPercentage, getStatusColorClass } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { generateInvestmentReport } from '../utils/excel-generator';
+import { toast } from '../utils/notifications';
 
 export const InvestmentsPage: React.FC = () => {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -19,7 +20,9 @@ export const InvestmentsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const loadInvestments = async () => {
@@ -33,6 +36,8 @@ export const InvestmentsPage: React.FC = () => {
         setSummary(summaryData);
       } catch (error) {
         console.error('Failed to load investments:', error);
+        setError('Failed to load investments');
+        toast.error('Failed to load investments');
       } finally {
         setIsLoading(false);
       }
@@ -77,6 +82,7 @@ export const InvestmentsPage: React.FC = () => {
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Failed to add investment:', error);
+      toast.error('Failed to add investment');
     } finally {
       setIsSubmitting(false);
     }
@@ -104,6 +110,11 @@ export const InvestmentsPage: React.FC = () => {
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 border border-red-200">
+          {error}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
         <div className="w-full sm:w-72">
           <Input
@@ -125,7 +136,10 @@ export const InvestmentsPage: React.FC = () => {
           </Button>
           <Button
             iconLeft={<Plus size={18} />}
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
           >
             Add Investment
           </Button>
@@ -159,7 +173,10 @@ export const InvestmentsPage: React.FC = () => {
                   className="mt-3" 
                   variant="primary" 
                   iconLeft={<Plus size={18} />}
-                  onClick={() => setIsAddDialogOpen(true)}
+                  onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
                 >
                   Add Investment
                 </Button>
@@ -250,6 +267,7 @@ export const InvestmentsPage: React.FC = () => {
         title="Add Investment"
       >
         <InvestmentForm
+          key={`add-investment-form-${formKey}`}
           onSubmit={handleAddInvestment}
           onCancel={() => setIsAddDialogOpen(false)}
           isLoading={isSubmitting}

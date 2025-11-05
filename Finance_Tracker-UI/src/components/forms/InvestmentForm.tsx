@@ -3,6 +3,8 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Investment } from '../../types/Investment';
+import { toast } from '../../utils/notifications';
+import { INVESTMENT_TYPES } from '../../constants';
 
 interface InvestmentFormProps {
   onSubmit: (data: any) => void;
@@ -12,9 +14,7 @@ interface InvestmentFormProps {
   mode?: 'create' | 'edit';
 }
 
-const INVESTMENT_TYPES = [
-  'STOCK', 'MUTUAL_FUND', 'FIXED_DEPOSIT', 'BONDS', 'REAL_ESTATE', 'GOLD', 'OTHER'
-];
+// constants moved to shared constants.ts
 
 export const InvestmentForm: React.FC<InvestmentFormProps> = ({
   onSubmit,
@@ -26,7 +26,7 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     symbol: '',
-    type: '',
+    type: INVESTMENT_TYPES[0] || '', // Default to first investment type
     quantity: '',
     purchasePrice: '',
     currentPrice: '',
@@ -44,16 +44,38 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
         currentPrice: initialData.currentPrice.toString(),
         purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
       });
+    } else {
+      // Reset form to defaults when no initial data (for create mode)
+      setFormData({
+        name: '',
+        symbol: '',
+        type: INVESTMENT_TYPES[0] || '',
+        quantity: '',
+        purchasePrice: '',
+        currentPrice: '',
+        purchaseDate: new Date().toISOString().split('T')[0],
+      });
     }
   }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const quantity = parseFloat(formData.quantity);
+    const purchasePrice = parseFloat(formData.purchasePrice);
+    const currentPrice = parseFloat(formData.currentPrice);
+    if ([quantity, purchasePrice, currentPrice].some((n) => isNaN(n) || n <= 0)) {
+      toast.error('Quantity and prices must be positive numbers');
+      return;
+    }
+    if (!formData.type) {
+      toast.error('Please select investment type');
+      return;
+    }
     onSubmit({
       ...formData,
-      quantity: parseFloat(formData.quantity),
-      purchasePrice: parseFloat(formData.purchasePrice),
-      currentPrice: parseFloat(formData.currentPrice),
+      quantity,
+      purchasePrice,
+      currentPrice,
     });
   };
 

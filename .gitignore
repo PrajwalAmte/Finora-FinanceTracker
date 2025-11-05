@@ -42,6 +42,12 @@ dist-ssr
 .env.*
 !.env.example
 
+# Backend Environment Files
+Finance_Tracker-API/.env
+Finance_Tracker-API/.env.local
+Finance_Tracker-API/.env.*
+!Finance_Tracker-API/.env.example
+
 # Logs
 logs
 *.log
@@ -58,7 +64,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-
 # Keep application.properties but ignore sensitive data
 src/main/resources/application-prod.properties
 src/main/resources/application-dev.properties

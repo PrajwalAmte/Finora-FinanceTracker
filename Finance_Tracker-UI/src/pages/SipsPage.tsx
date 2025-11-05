@@ -18,6 +18,7 @@ export const SipsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -117,7 +118,10 @@ export const SipsPage: React.FC = () => {
           </Button>
           <Button
             iconLeft={<Plus size={18} />}
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
           >
             Add SIP
           </Button>
@@ -154,7 +158,10 @@ export const SipsPage: React.FC = () => {
                   className="mt-3" 
                   variant="primary" 
                   iconLeft={<Plus size={18} />}
-                  onClick={() => setIsAddDialogOpen(true)}
+                  onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
                 >
                   Add SIP
                 </Button>
@@ -246,6 +253,7 @@ export const SipsPage: React.FC = () => {
         title="Add SIP"
       >
         <SipForm
+          key={`add-sip-form-${formKey}`}
           onSubmit={handleAddSip}
           onCancel={() => setIsAddDialogOpen(false)}
           isLoading={isSubmitting}

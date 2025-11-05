@@ -17,7 +17,7 @@ export const Layout: React.FC = () => {
     if (path.startsWith('/loans')) return 'Loans';
     if (path.startsWith('/expenses')) return 'Expenses';
     
-    return 'Finance Tracker';
+    return 'Finora';
   };
   
   // Helper function to get page subtitle based on current route

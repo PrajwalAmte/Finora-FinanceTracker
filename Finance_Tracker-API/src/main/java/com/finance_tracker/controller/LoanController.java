@@ -5,6 +5,8 @@ import com.finance_tracker.service.LoanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,9 +14,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loans")
+@RequiredArgsConstructor
 public class LoanController {
-    @Autowired
-    private LoanService loanService;
+    private final LoanService loanService;
 
     @GetMapping
     public List<Loan> getAllLoans() {
@@ -29,12 +31,12 @@ public class LoanController {
     }
 
     @PostMapping
-    public Loan createLoan(@RequestBody Loan loan) {
+    public Loan createLoan(@Valid @RequestBody Loan loan) {
         return loanService.saveLoan(loan);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @RequestBody Loan loan) {
+    public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @Valid @RequestBody Loan loan) {
         return loanService.getLoanById(id)
                 .map(existingLoan -> {
                     loan.setId(id);

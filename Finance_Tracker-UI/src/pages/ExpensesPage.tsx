@@ -14,17 +14,10 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { BarChart } from '../components/charts/BarChart';
 import { generateExpenseReport } from '../utils/excel-generator';
+import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../constants';
+import { toast } from '../utils/notifications';
 
-// Payment methods
-const PAYMENT_METHODS = [
-  'Cash', 'Credit Card', 'Debit Card', 'UPI', 'Net Banking', 'Wallet', 'Other'
-];
-
-// Expense categories
-const EXPENSE_CATEGORIES = [
-  'Food', 'Groceries', 'Transportation', 'Entertainment', 'Shopping', 
-  'Utilities', 'Rent', 'Health', 'Travel', 'Education', 'Miscellaneous'
-];
+// constants moved to shared constants.ts
 
 export const ExpensesPage: React.FC = () => {
   // State for expenses
@@ -50,7 +43,9 @@ export const ExpensesPage: React.FC = () => {
   });
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Load expenses data
   useEffect(() => {
@@ -67,6 +62,8 @@ export const ExpensesPage: React.FC = () => {
         setSummary(summaryData);
       } catch (error) {
         console.error('Failed to load expenses:', error);
+        setError('Failed to load expenses');
+        toast.error('Failed to load expenses');
       } finally {
         setIsLoading(false);
       }
@@ -169,6 +166,7 @@ export const ExpensesPage: React.FC = () => {
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Failed to add expense:', error);
+      toast.error('Failed to add expense');
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +184,11 @@ export const ExpensesPage: React.FC = () => {
 
   return (
     <div>
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 border border-red-200">
+          {error}
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 mb-6">
         <div className="sm:col-span-3">
           <Input
@@ -234,7 +237,10 @@ export const ExpensesPage: React.FC = () => {
           <Button
             iconLeft={<Plus size={18} />}
             fullWidth
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
           >
             Add Expense
           </Button>
@@ -278,7 +284,10 @@ export const ExpensesPage: React.FC = () => {
                   className="mt-3" 
                   variant="primary" 
                   iconLeft={<Plus size={18} />}
-                  onClick={() => setIsAddDialogOpen(true)}
+                  onClick={() => {
+                    setFormKey(prev => prev + 1);
+                    setIsAddDialogOpen(true);
+                  }}
                 >
                   Add Expense
                 </Button>
@@ -369,6 +378,7 @@ export const ExpensesPage: React.FC = () => {
         title="Add Expense"
       >
         <ExpenseForm
+          key={`add-expense-form-${formKey}`}
           onSubmit={handleAddExpense}
           onCancel={() => setIsAddDialogOpen(false)}
           isLoading={isSubmitting}

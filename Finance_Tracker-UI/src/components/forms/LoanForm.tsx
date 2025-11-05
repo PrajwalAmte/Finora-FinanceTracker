@@ -3,6 +3,8 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Loan } from '../../types/Loan';
+import { toast } from '../../utils/notifications';
+import { INTEREST_TYPES, COMPOUNDING_FREQUENCIES } from '../../constants';
 
 interface LoanFormProps {
   onSubmit: (data: any) => void;
@@ -12,16 +14,7 @@ interface LoanFormProps {
   mode?: 'create' | 'edit';
 }
 
-const INTEREST_TYPES = [
-  { value: 'SIMPLE', label: 'Simple Interest' },
-  { value: 'COMPOUND', label: 'Compound Interest' }
-];
-
-const COMPOUNDING_FREQUENCIES = [
-  { value: 'MONTHLY', label: 'Monthly' },
-  { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'YEARLY', label: 'Yearly' }
-];
+// constants moved to shared constants.ts
 
 export const LoanForm: React.FC<LoanFormProps> = ({
   onSubmit,
@@ -53,17 +46,41 @@ export const LoanForm: React.FC<LoanFormProps> = ({
         tenureMonths: initialData.tenureMonths.toString(),
         currentBalance: initialData.currentBalance.toString(),
       });
+    } else {
+      // Reset form to defaults when no initial data (for create mode)
+      setFormData({
+        name: '',
+        principalAmount: '',
+        interestRate: '',
+        interestType: 'SIMPLE',
+        compoundingFrequency: 'MONTHLY',
+        startDate: new Date().toISOString().split('T')[0],
+        tenureMonths: '',
+        currentBalance: '',
+      });
     }
   }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const principalAmount = parseFloat(formData.principalAmount);
+    const interestRate = parseFloat(formData.interestRate);
+    const tenureMonths = parseInt(formData.tenureMonths);
+    const currentBalance = parseFloat(formData.currentBalance);
+    if ([principalAmount, interestRate, currentBalance].some((n) => isNaN(n) || n <= 0) || isNaN(tenureMonths) || tenureMonths <= 0) {
+      toast.error('Please enter valid positive numbers');
+      return;
+    }
+    if (!formData.interestType) {
+      toast.error('Please select interest type');
+      return;
+    }
     onSubmit({
       ...formData,
-      principalAmount: parseFloat(formData.principalAmount),
-      interestRate: parseFloat(formData.interestRate),
-      tenureMonths: parseInt(formData.tenureMonths),
-      currentBalance: parseFloat(formData.currentBalance),
+      principalAmount,
+      interestRate,
+      tenureMonths,
+      currentBalance,
     });
   };
 

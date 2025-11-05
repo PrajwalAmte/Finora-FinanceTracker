@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: finance-tracker-postgres
+    environment:
+      POSTGRES_DB: finance_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finance-tracker-network
+
+  backend:
+    build:
+      context: ./Finance_Tracker-API
+      dockerfile: Dockerfile
+    container_name: finance-tracker-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance_tracker
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: true
+      SERVER_PORT: 8080
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: INFO
+      LOGGING_LEVEL_COM_FINANCE_TRACKER: DEBUG
+      SPRINGDOC_API_DOCS_ENABLED: true
+      SPRINGDOC_SWAGGER_UI_ENABLED: true
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 5
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 600000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1800000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finance-tracker-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Finance_Tracker-UI
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:8080/api
+    container_name: finance-tracker-frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - finance-tracker-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  finance-tracker-network:
+    driver: bridge
+

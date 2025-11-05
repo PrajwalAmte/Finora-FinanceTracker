@@ -4,6 +4,8 @@ import com.finance_tracker.model.Loan;
 import com.finance_tracker.repository.LoanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -14,9 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class LoanService {
-    @Autowired
-    private LoanRepository loanRepository;
+    private final LoanRepository loanRepository;
 
     public List<Loan> getAllLoans() {
         return loanRepository.findAll();
@@ -74,6 +76,7 @@ public class LoanService {
     }
 
     // Method to update loan balances (would be called by the scheduler)
+    @Transactional
     public void updateLoanBalances() {
         LocalDate today = LocalDate.now();
         List<Loan> loans = getAllLoans();
@@ -123,16 +126,16 @@ public class LoanService {
         BigDecimal annualRate = loan.getInterestRate().divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP);
         BigDecimal monthlyRate;
 
-        if ("SIMPLE".equals(loan.getInterestType())) {
+        if (com.finance_tracker.model.LoanInterestType.SIMPLE.equals(loan.getInterestType())) {
             // For simple interest, just divide annual rate by 12
             monthlyRate = annualRate.divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
         } else {
             // For compound interest, use the effective monthly rate based on compounding frequency
             switch (loan.getCompoundingFrequency()) {
-                case "MONTHLY":
+                case MONTHLY:
                     monthlyRate = annualRate.divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
                     break;
-                case "QUARTERLY":
+                case QUARTERLY:
                     // Convert quarterly rate to monthly
                     BigDecimal quarterlyRate = annualRate.divide(new BigDecimal("4"), 10, RoundingMode.HALF_UP);
                     BigDecimal effectiveQuarterlyRate = BigDecimal.ONE.add(quarterlyRate);
@@ -140,7 +143,7 @@ public class LoanService {
                             .subtract(BigDecimal.ONE);
                     monthlyRate = effectiveMonthlyRate;
                     break;
-                case "YEARLY":
+                case YEARLY:
                     // Convert yearly rate to monthly
                     BigDecimal effectiveYearlyRate = BigDecimal.ONE.add(annualRate);
                     BigDecimal effectiveMonthlyRate2 = effectiveYearlyRate.pow(1, new MathContext(10))

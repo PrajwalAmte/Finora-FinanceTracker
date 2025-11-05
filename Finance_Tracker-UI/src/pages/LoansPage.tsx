@@ -20,6 +20,7 @@ export const LoansPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -137,7 +138,10 @@ export const LoansPage: React.FC = () => {
           </Button>
           <Button
             iconLeft={<Plus size={18} />}
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
           >
             Add Loan
           </Button>
@@ -174,7 +178,10 @@ export const LoansPage: React.FC = () => {
                   className="mt-3" 
                   variant="primary" 
                   iconLeft={<Plus size={18} />}
-                  onClick={() => setIsAddDialogOpen(true)}
+                  onClick={() => {
+              setFormKey(prev => prev + 1);
+              setIsAddDialogOpen(true);
+            }}
                 >
                   Add Loan
                 </Button>
@@ -295,6 +302,7 @@ export const LoansPage: React.FC = () => {
         title="Add Loan"
       >
         <LoanForm
+          key={`add-loan-form-${formKey}`}
           onSubmit={handleAddLoan}
           onCancel={() => setIsAddDialogOpen(false)}
           isLoading={isSubmitting}
