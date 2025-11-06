@@ -1,62 +1,54 @@
-import axios, { AxiosError } from 'axios';
-import { toast } from '../utils/notifications';
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { toast } from "../utils/notifications";
 
-// Try to get the API base URL from environment variables, otherwise use a default
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8082/api';
+const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || "http://localhost:8082";
+const API_BASE_URL = `${BACKEND_URL}/api`;
 
-// Create axios instance with common configuration
+let jwtToken: string | null = null;
+
+export async function initJwtToken() {
+  try {
+    const response = await axios.get(`${BACKEND_URL}/auth/token`);
+    jwtToken = response.data;
+  } catch (error) {
+    console.error("Failed to load JWT token", error);
+    toast.error("Cannot connect to backend. Start the backend server.");
+  }
+}
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
 });
 
-// Add request interceptor
 apiClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
+    if (jwtToken) {
+      config.headers.Authorization = `Bearer ${jwtToken}`;
+    }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error: AxiosError) => {
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout - server took too long to respond');
-      toast.error('Request timeout - server took too long to respond');
+    if (error.code === "ECONNABORTED") {
+      toast.error("Request timeout - server slow.");
     } else if (!error.response) {
-      console.error('Network error - cannot connect to the server. Please check if the server is running.');
-      toast.error('Cannot connect to server. Is it running?');
+      toast.error("Cannot connect to backend. Is server running?");
     } else {
       const status = error.response.status;
-      
-      // Handle specific HTTP status codes
-      if (status === 401) {
-        console.error('Unauthorized - please log in again');
-        toast.error('Unauthorized - please log in again');
-      } else if (status === 403) {
-        console.error('Forbidden - you do not have permission to access this resource');
-        toast.error('Forbidden - insufficient permissions');
-      } else if (status === 404) {
-        console.error('Resource not found');
-        toast.error('Resource not found');
-      } else if (status === 500) {
-        console.error('Server error - please try again later');
-        toast.error('Server error - please try again later');
-      } else {
-        console.error(`API Error (${status}):`, error.response?.data || error.message);
-        toast.error(`API Error (${status})`);
-      }
+      if (status === 401) toast.error("Unauthorized request.");
+      else if (status === 403) toast.error("Forbidden.");
+      else if (status === 404) toast.error("Not found.");
+      else if (status === 500) toast.error("Server error - try again later.");
+      else toast.error(`API Error (${status})`);
     }
-    
     return Promise.reject(error);
   }
 );
