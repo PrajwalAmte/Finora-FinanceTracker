@@ -4,7 +4,6 @@ import com.finance_tracker.model.Sip;
 import com.finance_tracker.repository.SipRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,15 +35,22 @@ public class SipService {
     private Map<String, BigDecimal> navCache = new ConcurrentHashMap<>();
     private LocalDate navCacheDate = null;
 
+    // Configure HttpClient to follow redirects
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
+            .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
     public List<Sip> getAllSips() {
         return sipRepository.findAll();
     }
 
-    public Optional<Sip> getSipById(Long id) {
+    public Sip getSipById(Long id) {
+        return sipRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Sip", id));
+    }
+    
+    public Optional<Sip> findSipById(Long id) {
         return sipRepository.findById(id);
     }
 
@@ -62,6 +68,9 @@ public class SipService {
     }
 
     public void deleteSip(Long id) {
+        if (!sipRepository.existsById(id)) {
+            throw new com.finance_tracker.exception.ResourceNotFoundException("Sip", id);
+        }
         sipRepository.deleteById(id);
     }
 
@@ -233,12 +242,12 @@ public class SipService {
         try {
             logger.info("Fetching NAV data from AMFI");
 
-            // AMFI provides NAV data in a plain text CSV format
-            String amfiUrl = "https://www.amfiindia.com/spages/NAVAll.txt";
+            // Updated AMFI URL - use the portal subdomain
+            String amfiUrl = "https://portal.amfiindia.com/spages/NAVAll.txt";
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(amfiUrl))
-                    .timeout(Duration.ofSeconds(30)) // Longer timeout for AMFI which can be slow
+                    .timeout(Duration.ofSeconds(30))
                     .GET()
                     .build();
 

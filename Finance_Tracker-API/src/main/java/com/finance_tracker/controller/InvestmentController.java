@@ -1,68 +1,68 @@
 package com.finance_tracker.controller;
 
+import com.finance_tracker.dto.InvestmentRequestDTO;
+import com.finance_tracker.dto.InvestmentResponseDTO;
+import com.finance_tracker.dto.InvestmentSummaryDTO;
+import com.finance_tracker.mapper.InvestmentMapper;
 import com.finance_tracker.model.Investment;
 import com.finance_tracker.service.InvestmentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/investments")
 @RequiredArgsConstructor
 public class InvestmentController {
     private final InvestmentService investmentService;
+    private final InvestmentMapper investmentMapper;
 
     @GetMapping
-    public List<Investment> getAllInvestments() {
-        return investmentService.getAllInvestments();
+    public List<InvestmentResponseDTO> getAllInvestments() {
+        List<Investment> investments = investmentService.getAllInvestments();
+        return investmentMapper.toDTOList(investments);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Investment> getInvestmentById(@PathVariable Long id) {
-        return investmentService.getInvestmentById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public InvestmentResponseDTO getInvestmentById(@PathVariable Long id) {
+        Investment investment = investmentService.getInvestmentById(id);
+        return investmentMapper.toDTO(investment);
     }
 
     @PostMapping
-    public Investment createInvestment(@Valid @RequestBody Investment investment) {
-        return investmentService.saveInvestment(investment);
+    public InvestmentResponseDTO createInvestment(@Valid @RequestBody InvestmentRequestDTO investmentDTO) {
+        Investment investment = investmentMapper.toEntity(investmentDTO);
+        Investment savedInvestment = investmentService.saveInvestment(investment);
+        return investmentMapper.toDTO(savedInvestment);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Investment> updateInvestment(@PathVariable Long id, @Valid @RequestBody Investment investment) {
-        return investmentService.getInvestmentById(id)
-                .map(existingInvestment -> {
-                    investment.setId(id);
-                    return ResponseEntity.ok(investmentService.saveInvestment(investment));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public InvestmentResponseDTO updateInvestment(@PathVariable Long id, @Valid @RequestBody InvestmentRequestDTO investmentDTO) {
+        investmentService.getInvestmentById(id);
+        
+        Investment investment = investmentMapper.toEntity(investmentDTO);
+        investment.setId(id);
+        Investment updatedInvestment = investmentService.saveInvestment(investment);
+        return investmentMapper.toDTO(updatedInvestment);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInvestment(@PathVariable Long id) {
-        return investmentService.getInvestmentById(id)
-                .map(investment -> {
-                    investmentService.deleteInvestment(id);
-                    return ResponseEntity.ok().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        investmentService.deleteInvestment(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<Object> getInvestmentSummary() {
-        BigDecimal totalValue = investmentService.getTotalInvestmentValue();
-        BigDecimal totalProfitLoss = investmentService.getTotalProfitLoss();
+    public InvestmentSummaryDTO getInvestmentSummary() {
+        var totalValue = investmentService.getTotalInvestmentValue();
+        var totalProfitLoss = investmentService.getTotalProfitLoss();
 
-        return ResponseEntity.ok(Map.of(
-                "totalValue", totalValue,
-                "totalProfitLoss", totalProfitLoss
-        ));
+        return InvestmentSummaryDTO.builder()
+                .totalValue(totalValue)
+                .totalProfitLoss(totalProfitLoss)
+                .build();
     }
 }

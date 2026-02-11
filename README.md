@@ -293,7 +293,7 @@ JWT_SECRET=your_jwt_secret_key_here
 TWELVEDATA_API_KEY=your_api_key_here
 SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/finance_tracker
 SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=your_password
+SPRING_DATASOURCE_PASSWORD=postgres
 SERVER_PORT=8082
 ```
 

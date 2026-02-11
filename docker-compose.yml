@@ -24,17 +24,13 @@ services:
       context: ./Finance_Tracker-API
       dockerfile: Dockerfile
     container_name: finance-tracker-backend
-
     env_file:
       - ./Finance_Tracker-API/.env
-
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance_tracker
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD:
-
+      SPRING_DATASOURCE_PASSWORD: postgres
       SERVER_PORT: 8082
-
     ports:
       - "8082:8082"
     depends_on:
@@ -49,10 +45,10 @@ services:
       context: ./Finance_Tracker-UI
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=http://localhost:8082/api
+        - VITE_API_BASE_URL=/api
     container_name: finance-tracker-frontend
     environment:
-      - VITE_API_BASE_URL=http://localhost:8082/api
+      - VITE_API_BASE_URL=/api
     ports:
       - "80:80"
     depends_on:

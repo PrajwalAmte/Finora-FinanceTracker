@@ -5,23 +5,13 @@ import { DashboardMetricCard } from '../components/dashboard/DashboardMetricCard
 import { Card } from '../components/ui/Card';
 import { PieChart } from '../components/charts/PieChart';
 import { Button } from '../components/ui/Button';
-import { expenseApi } from '../api/expenseApi';
-import { investmentApi } from '../api/investmentApi';
-import { sipApi } from '../api/sipApi';
-import { loanApi } from '../api/loanApi';
-import { ExpenseSummary } from '../types/Expense';
-import { InvestmentSummary } from '../types/Investment';
-import { SipSummary } from '../types/Sip';
-import { LoanSummary } from '../types/Loan';
+import { summaryApi, ComprehensiveFinanceSummary } from '../api/summaryApi';
 
 export const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [expenseSummary, setExpenseSummary] = useState<ExpenseSummary | null>(null);
-  const [investmentSummary, setInvestmentSummary] = useState<InvestmentSummary | null>(null);
-  const [sipSummary, setSipSummary] = useState<SipSummary | null>(null);
-  const [loanSummary, setLoanSummary] = useState<LoanSummary | null>(null);
+  const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
 
-  // Load all summary data
+  // Load all summary data using facade
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -32,18 +22,10 @@ export const Dashboard: React.FC = () => {
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
         const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
         
-        // Fetch all summaries in parallel
-        const [expensesResult, investmentsResult, sipsResult, loansResult] = await Promise.all([
-          expenseApi.getSummary(firstDayOfMonth, lastDayOfMonth),
-          investmentApi.getSummary(),
-          sipApi.getSummary(),
-          loanApi.getSummary()
-        ]);
+        // Fetch comprehensive summary with single API call
+        const result = await summaryApi.getComprehensiveSummary(firstDayOfMonth, lastDayOfMonth);
         
-        setExpenseSummary(expensesResult);
-        setInvestmentSummary(investmentsResult);
-        setSipSummary(sipsResult);
-        setLoanSummary(loansResult);
+        setSummary(result);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -54,21 +36,11 @@ export const Dashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  // Calculate net worth
-  const calculateNetWorth = () => {
-    const investmentValue = investmentSummary?.totalValue || 0;
-    const sipValue = sipSummary?.totalCurrentValue || 0;
-    const loanValue = loanSummary?.totalBalance || 0;
-    
-    // Assets - Liabilities
-    return (investmentValue + sipValue) - loanValue;
-  };
-
   // Prepare expense category data for pie chart
   const getExpenseCategoryData = () => {
-    if (!expenseSummary?.expensesByCategory) return [];
+    if (!summary?.expenseSummary?.expensesByCategory) return [];
     
-    return Object.entries(expenseSummary.expensesByCategory).map(([name, value]) => ({
+    return Object.entries(summary.expenseSummary.expensesByCategory).map(([name, value]) => ({
       name,
       value
     }));
@@ -76,8 +48,8 @@ export const Dashboard: React.FC = () => {
 
   // Prepare investment data for pie chart
   const getAssetAllocationData = () => {
-    const investmentValue = investmentSummary?.totalValue || 0;
-    const sipValue = sipSummary?.totalCurrentValue || 0;
+    const investmentValue = summary?.investmentSummary?.totalValue || 0;
+    const sipValue = summary?.sipSummary?.totalCurrentValue || 0;
     
     return [
       { name: 'Investments', value: investmentValue },
@@ -85,13 +57,37 @@ export const Dashboard: React.FC = () => {
     ];
   };
 
+  // Calculate total return percentage
+const getTotalReturnPercentage = () => {
+  if (!summary) return undefined;
+  
+  const investmentValue = summary.investmentSummary.totalValue || 0;
+  const investmentProfitLoss = summary.investmentSummary.totalProfitLoss || 0;
+  
+  const sipValue = summary.sipSummary.totalCurrentValue || 0;
+  const sipProfitLoss = summary.sipSummary.totalProfitLoss || 0;
+  
+  // Total current value
+  const totalCurrentValue = investmentValue + sipValue;
+  
+  // Total profit/loss
+  const totalProfitLoss = investmentProfitLoss + sipProfitLoss;
+  
+  // Total invested = current value - profit/loss
+  const totalInvested = totalCurrentValue - totalProfitLoss;
+  
+  if (totalInvested === 0) return undefined;
+  
+  return (totalProfitLoss / totalInvested) * 100;
+};
+
   return (
     <div className="animate-fade-in">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Net Worth */}
         <DashboardMetricCard
           title="Net Worth"
-          value={calculateNetWorth()}
+          value={summary?.netWorth || 0}
           icon={<TrendingUp />}
           isLoading={isLoading}
           onClick={() => {}}
@@ -100,12 +96,8 @@ export const Dashboard: React.FC = () => {
         {/* Total Investments */}
         <DashboardMetricCard
           title="Investments"
-          value={(investmentSummary?.totalValue || 0) + (sipSummary?.totalCurrentValue || 0)}
-          changeValue={
-            investmentSummary?.totalProfitLoss && investmentSummary.totalValue
-              ? (investmentSummary.totalProfitLoss / investmentSummary.totalValue) * 100
-              : undefined
-          }
+          value={summary?.totalAssets || 0}
+          changeValue={getTotalReturnPercentage()}
           changeLabel="Overall Return"
           icon={<TrendingUp />}
           isLoading={isLoading}
@@ -115,7 +107,7 @@ export const Dashboard: React.FC = () => {
         {/* Total Loans */}
         <DashboardMetricCard
           title="Loan Balance"
-          value={loanSummary?.totalBalance || 0}
+          value={summary?.loanSummary?.totalBalance || 0}
           icon={<CreditCard />}
           isLoading={isLoading}
           onClick={() => {}}
@@ -124,7 +116,7 @@ export const Dashboard: React.FC = () => {
         {/* Monthly Expenses */}
         <DashboardMetricCard
           title="Monthly Expenses"
-          value={expenseSummary?.totalExpenses || 0}
+          value={summary?.expenseSummary?.totalExpenses || 0}
           icon={<DollarSign />}
           isLoading={isLoading}
           onClick={() => {}}

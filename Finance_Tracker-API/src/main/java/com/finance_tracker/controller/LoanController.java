@@ -1,66 +1,67 @@
 package com.finance_tracker.controller;
 
+import com.finance_tracker.dto.LoanRequestDTO;
+import com.finance_tracker.dto.LoanResponseDTO;
+import com.finance_tracker.dto.LoanSummaryDTO;
+import com.finance_tracker.mapper.LoanMapper;
 import com.finance_tracker.model.Loan;
 import com.finance_tracker.service.LoanService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loans")
 @RequiredArgsConstructor
 public class LoanController {
     private final LoanService loanService;
+    private final LoanMapper loanMapper;
 
     @GetMapping
-    public List<Loan> getAllLoans() {
-        return loanService.getAllLoans();
+    public List<LoanResponseDTO> getAllLoans() {
+        List<Loan> loans = loanService.getAllLoans();
+        return loanMapper.toDTOList(loans);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Loan> getLoanById(@PathVariable Long id) {
-        return loanService.getLoanById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public LoanResponseDTO getLoanById(@PathVariable Long id) {
+        Loan loan = loanService.getLoanById(id);
+        return loanMapper.toDTO(loan);
     }
 
     @PostMapping
-    public Loan createLoan(@Valid @RequestBody Loan loan) {
-        return loanService.saveLoan(loan);
+    public LoanResponseDTO createLoan(@Valid @RequestBody LoanRequestDTO loanDTO) {
+        Loan loan = loanMapper.toEntity(loanDTO);
+        Loan savedLoan = loanService.saveLoan(loan);
+        return loanMapper.toDTO(savedLoan);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Loan> updateLoan(@PathVariable Long id, @Valid @RequestBody Loan loan) {
-        return loanService.getLoanById(id)
-                .map(existingLoan -> {
-                    loan.setId(id);
-                    return ResponseEntity.ok(loanService.saveLoan(loan));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public LoanResponseDTO updateLoan(@PathVariable Long id, @Valid @RequestBody LoanRequestDTO loanDTO) {
+        // Verify loan exists
+        loanService.getLoanById(id);
+        
+        Loan loan = loanMapper.toEntity(loanDTO);
+        loan.setId(id);
+        Loan updatedLoan = loanService.saveLoan(loan);
+        return loanMapper.toDTO(updatedLoan);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
-        return loanService.getLoanById(id)
-                .map(loan -> {
-                    loanService.deleteLoan(id);
-                    return ResponseEntity.ok().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        loanService.deleteLoan(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<Object> getLoanSummary() {
-        BigDecimal totalBalance = loanService.getTotalLoanBalance();
+    public LoanSummaryDTO getLoanSummary() {
+        var totalBalance = loanService.getTotalLoanBalance();
 
-        return ResponseEntity.ok(Map.of(
-                "totalBalance", totalBalance
-        ));
+        return LoanSummaryDTO.builder()
+                .totalBalance(totalBalance)
+                .build();
     }
 }

@@ -1,4 +1,4 @@
-package com.finance_tracker.scheduler;
+package com.finance_tracker.utils.scheduler;
 
 import com.finance_tracker.service.InvestmentService;
 import com.finance_tracker.service.LoanService;

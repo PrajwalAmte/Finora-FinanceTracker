@@ -1,4 +1,4 @@
-package com.finance_tracker.security;
+package com.finance_tracker.utils.security;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;

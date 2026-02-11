@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for API URL
-ARG VITE_API_BASE_URL=http://localhost:8080/api
+# Build argument for API URL - now using relative path since nginx proxies
+ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Build the application
@@ -37,4 +37,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 # Start NGINX
 CMD ["nginx", "-g", "daemon off;"]
-

@@ -20,7 +20,6 @@ interface PieChartProps {
   className?: string;
 }
 
-// Custom colors for the pie chart
 const COLORS = [
   '#3867D6', // primary
   '#48BB78', // success-500
@@ -40,10 +39,9 @@ export const PieChart: React.FC<PieChartProps> = ({
   height = 300,
   className,
 }) => {
-  // Filter out zero values
+
   const filteredData = data.filter(item => item.value > 0);
 
-  // If no data or all values are zero
   if (filteredData.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-${height} ${className}`}>
@@ -52,7 +50,6 @@ export const PieChart: React.FC<PieChartProps> = ({
     );
   }
 
-  // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -71,7 +68,6 @@ export const PieChart: React.FC<PieChartProps> = ({
     return null;
   };
 
-  // Custom legend
   const renderLegend = (props: any) => {
     const { payload } = props;
     return (
@@ -91,7 +87,6 @@ export const PieChart: React.FC<PieChartProps> = ({
     );
   };
 
-  // Custom label
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;

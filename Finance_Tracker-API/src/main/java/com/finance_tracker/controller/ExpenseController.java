@@ -1,8 +1,14 @@
 package com.finance_tracker.controller;
 
+import com.finance_tracker.dto.ExpenseRequestDTO;
+import com.finance_tracker.dto.ExpenseResponseDTO;
+import com.finance_tracker.dto.ExpenseSummaryDTO;
+import com.finance_tracker.mapper.ExpenseMapper;
 import com.finance_tracker.model.Expense;
 import com.finance_tracker.service.ExpenseService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,70 +18,74 @@ import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/expenses")
 @RequiredArgsConstructor
 public class ExpenseController {
     private final ExpenseService expenseService;
+    private final ExpenseMapper expenseMapper;
 
     @GetMapping
-    public List<Expense> getAllExpenses() {
-        return expenseService.getAllExpenses();
+    public List<ExpenseResponseDTO> getAllExpenses(
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "1000") int size) {
+        if (size > 1000) size = 1000;
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Expense> expensePage = expenseService.getAllExpenses(pageable);
+        return expenseMapper.toDTOList(expensePage.getContent());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Expense> getExpenseById(@PathVariable Long id) {
-        return expenseService.getExpenseById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ExpenseResponseDTO getExpenseById(@PathVariable Long id) {
+        Expense expense = expenseService.getExpenseById(id);
+        return expenseMapper.toDTO(expense);
     }
 
     @PostMapping
-    public Expense createExpense(@Valid @RequestBody Expense expense) {
-        return expenseService.saveExpense(expense);
+    public ExpenseResponseDTO createExpense(@Valid @RequestBody ExpenseRequestDTO expenseDTO) {
+        Expense expense = expenseMapper.toEntity(expenseDTO);
+        Expense savedExpense = expenseService.saveExpense(expense);
+        return expenseMapper.toDTO(savedExpense);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Expense> updateExpense(@PathVariable Long id, @Valid @RequestBody Expense expense) {
-        return expenseService.getExpenseById(id)
-                .map(existingExpense -> {
-                    expense.setId(id);
-                    return ResponseEntity.ok(expenseService.saveExpense(expense));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ExpenseResponseDTO updateExpense(@PathVariable Long id, @Valid @RequestBody ExpenseRequestDTO expenseDTO) {
+        expenseService.getExpenseById(id);
+        
+        Expense expense = expenseMapper.toEntity(expenseDTO);
+        expense.setId(id);
+        Expense updatedExpense = expenseService.saveExpense(expense);
+        return expenseMapper.toDTO(updatedExpense);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
-        return expenseService.getExpenseById(id)
-                .map(expense -> {
-                    expenseService.deleteExpense(id);
-                    return ResponseEntity.ok().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        expenseService.deleteExpense(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/by-date-range")
-    public List<Expense> getExpensesByDateRange(
+    public List<ExpenseResponseDTO> getExpensesByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return expenseService.getExpensesBetweenDates(startDate, endDate);
+        List<Expense> expenses = expenseService.getExpensesBetweenDates(startDate, endDate);
+        return expenseMapper.toDTOList(expenses);
     }
 
     @GetMapping("/by-category")
-    public List<Expense> getExpensesByCategory(@RequestParam String category) {
-        return expenseService.getExpensesByCategory(category);
+    public List<ExpenseResponseDTO> getExpensesByCategory(@RequestParam String category) {
+        List<Expense> expenses = expenseService.getExpensesByCategory(category);
+        return expenseMapper.toDTOList(expenses);
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<Object> getExpenseSummary(
+    public ExpenseSummaryDTO getExpenseSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         if (startDate == null) {
-            startDate = LocalDate.now().withDayOfMonth(1); // First day of current month
+            startDate = LocalDate.now().withDayOfMonth(1);
         }
 
         if (endDate == null) {
@@ -83,18 +93,18 @@ public class ExpenseController {
         }
 
         BigDecimal totalExpenses = expenseService.getTotalExpenses(startDate, endDate);
-        Map<String, BigDecimal> expensesByCategory = expenseService.getExpensesByCategory(startDate, endDate);
+        var expensesByCategory = expenseService.getExpensesByCategory(startDate, endDate);
 
-        return ResponseEntity.ok(Map.of(
-                "totalExpenses", totalExpenses,
-                "expensesByCategory", expensesByCategory
-        ));
+        return ExpenseSummaryDTO.builder()
+                .totalExpenses(totalExpenses)
+                .expensesByCategory(expensesByCategory)
+                .build();
     }
 
     @GetMapping("/average-monthly")
-    public ResponseEntity<BigDecimal> getAverageMonthlyExpense(
+    public BigDecimal getAverageMonthlyExpense(
             @RequestParam(required = false) String category) {
-        return ResponseEntity.ok(expenseService.getAverageMonthlyExpense(category));
+        return expenseService.getAverageMonthlyExpense(category);
     }
 }
 

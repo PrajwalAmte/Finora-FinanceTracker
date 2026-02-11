@@ -1,70 +1,71 @@
 package com.finance_tracker.controller;
 
+import com.finance_tracker.dto.SipRequestDTO;
+import com.finance_tracker.dto.SipResponseDTO;
+import com.finance_tracker.dto.SipSummaryDTO;
+import com.finance_tracker.mapper.SipMapper;
 import com.finance_tracker.model.Sip;
 import com.finance_tracker.service.SipService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sips")
 @RequiredArgsConstructor
 public class SipController {
     private final SipService sipService;
+    private final SipMapper sipMapper;
 
     @GetMapping
-    public List<Sip> getAllSips() {
-        return sipService.getAllSips();
+    public List<SipResponseDTO> getAllSips() {
+        List<Sip> sips = sipService.getAllSips();
+        return sipMapper.toDTOList(sips);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Sip> getSipById(@PathVariable Long id) {
-        return sipService.getSipById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public SipResponseDTO getSipById(@PathVariable Long id) {
+        Sip sip = sipService.getSipById(id);
+        return sipMapper.toDTO(sip);
     }
 
     @PostMapping
-    public Sip createSip(@Valid @RequestBody Sip sip) {
-        return sipService.saveSip(sip);
+    public SipResponseDTO createSip(@Valid @RequestBody SipRequestDTO sipDTO) {
+        Sip sip = sipMapper.toEntity(sipDTO);
+        Sip savedSip = sipService.saveSip(sip);
+        return sipMapper.toDTO(savedSip);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Sip> updateSip(@PathVariable Long id, @Valid @RequestBody Sip sip) {
-        return sipService.getSipById(id)
-                .map(existingSip -> {
-                    sip.setId(id);
-                    return ResponseEntity.ok(sipService.saveSip(sip));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public SipResponseDTO updateSip(@PathVariable Long id, @Valid @RequestBody SipRequestDTO sipDTO) {
+        // Verify sip exists
+        sipService.getSipById(id);
+        
+        Sip sip = sipMapper.toEntity(sipDTO);
+        sip.setId(id);
+        Sip updatedSip = sipService.saveSip(sip);
+        return sipMapper.toDTO(updatedSip);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSip(@PathVariable Long id) {
-        return sipService.getSipById(id)
-                .map(sip -> {
-                    sipService.deleteSip(id);
-                    return ResponseEntity.ok().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        sipService.deleteSip(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<Object> getSipSummary() {
-        BigDecimal totalValue = sipService.getTotalSipValue();
-        BigDecimal totalInvestment = sipService.getTotalSipInvestment();
-        BigDecimal totalProfitLoss = totalValue.subtract(totalInvestment);
+    public SipSummaryDTO getSipSummary() {
+        var totalValue = sipService.getTotalSipValue();
+        var totalInvestment = sipService.getTotalSipInvestment();
+        var totalProfitLoss = totalValue.subtract(totalInvestment);
 
-        return ResponseEntity.ok(Map.of(
-                "totalInvestment", totalInvestment,
-                "totalCurrentValue", totalValue,
-                "totalProfitLoss", totalProfitLoss
-        ));
+        return SipSummaryDTO.builder()
+                .totalInvestment(totalInvestment)
+                .totalCurrentValue(totalValue)
+                .totalProfitLoss(totalProfitLoss)
+                .build();
     }
 }
