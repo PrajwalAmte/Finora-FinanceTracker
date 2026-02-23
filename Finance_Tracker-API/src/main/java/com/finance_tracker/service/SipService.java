@@ -4,6 +4,7 @@ import com.finance_tracker.model.Sip;
 import com.finance_tracker.repository.SipRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,12 @@ public class SipService {
     private static final Logger logger = LoggerFactory.getLogger(SipService.class);
 
     private final SipRepository sipRepository;
+    private final LedgerService ledgerService;
+
+    private String resolveUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "system";
+    }
 
     // Cache NAV data to reduce API calls
     private Map<String, BigDecimal> navCache = new ConcurrentHashMap<>();
@@ -59,19 +66,26 @@ public class SipService {
             sip.setLastUpdated(LocalDate.now());
         }
 
-        // Initialize total units if null
         if (sip.getTotalUnits() == null) {
             sip.setTotalUnits(BigDecimal.ZERO);
         }
 
-        return sipRepository.save(sip);
+        if (sip.getId() != null) {
+            Sip before = sipRepository.findById(sip.getId()).orElse(null);
+            Sip saved = sipRepository.save(sip);
+            ledgerService.recordEvent("SIP", String.valueOf(saved.getId()), "UPDATE", before, saved, resolveUserId());
+            return saved;
+        }
+        Sip saved = sipRepository.save(sip);
+        ledgerService.recordEvent("SIP", String.valueOf(saved.getId()), "CREATE", null, saved, resolveUserId());
+        return saved;
     }
 
     public void deleteSip(Long id) {
-        if (!sipRepository.existsById(id)) {
-            throw new com.finance_tracker.exception.ResourceNotFoundException("Sip", id);
-        }
+        Sip before = sipRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Sip", id));
         sipRepository.deleteById(id);
+        ledgerService.recordEvent("SIP", String.valueOf(id), "DELETE", before, null, resolveUserId());
     }
 
     public BigDecimal getTotalSipValue() {

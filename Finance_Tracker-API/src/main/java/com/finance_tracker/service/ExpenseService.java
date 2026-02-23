@@ -5,6 +5,7 @@ import com.finance_tracker.model.Expense;
 import com.finance_tracker.repository.ExpenseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExpenseService {
     private final ExpenseRepository expenseRepository;
+    private final LedgerService ledgerService;
+
+    private String resolveUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "system";
+    }
 
     public Page<Expense> getAllExpenses(Pageable pageable) {
         return expenseRepository.findAll(pageable);
@@ -39,14 +46,22 @@ public class ExpenseService {
         if (expense.getDate() == null) {
             expense.setDate(LocalDate.now());
         }
-        return expenseRepository.save(expense);
+        if (expense.getId() != null) {
+            Expense before = expenseRepository.findById(expense.getId()).orElse(null);
+            Expense saved = expenseRepository.save(expense);
+            ledgerService.recordEvent("EXPENSE", String.valueOf(saved.getId()), "UPDATE", before, saved, resolveUserId());
+            return saved;
+        }
+        Expense saved = expenseRepository.save(expense);
+        ledgerService.recordEvent("EXPENSE", String.valueOf(saved.getId()), "CREATE", null, saved, resolveUserId());
+        return saved;
     }
 
     public void deleteExpense(Long id) {
-        if (!expenseRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Expense", id);
-        }
+        Expense before = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense", id));
         expenseRepository.deleteById(id);
+        ledgerService.recordEvent("EXPENSE", String.valueOf(id), "DELETE", before, null, resolveUserId());
     }
 
     public List<Expense> getExpensesBetweenDates(LocalDate startDate, LocalDate endDate) {

@@ -64,6 +64,10 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+# Certificates
+*.cer
+*.pem
+
 # Keep application.properties but ignore sensitive data
 src/main/resources/application-prod.properties
 src/main/resources/application-dev.properties

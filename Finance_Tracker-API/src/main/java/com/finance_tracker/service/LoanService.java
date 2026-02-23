@@ -2,6 +2,7 @@ package com.finance_tracker.service;
 
 import com.finance_tracker.model.Loan;
 import com.finance_tracker.repository.LoanRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class LoanService {
     private final LoanRepository loanRepository;
+    private final LedgerService ledgerService;
+
+    private String resolveUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "system";
+    }
 
     public List<Loan> getAllLoans() {
         return loanRepository.findAll();
@@ -37,27 +44,33 @@ public class LoanService {
             loan.setLastUpdated(LocalDate.now());
         }
 
-        // If this is a new loan and EMI is not set, calculate it
         if (loan.getId() == null && loan.getEmiAmount() == null &&
                 loan.getPrincipalAmount() != null && loan.getInterestRate() != null &&
                 loan.getTenureMonths() != null) {
 
             loan.setEmiAmount(calculateEmi(loan));
 
-            // Set initial current balance to principal amount
             if (loan.getCurrentBalance() == null) {
                 loan.setCurrentBalance(loan.getPrincipalAmount());
             }
         }
 
-        return loanRepository.save(loan);
+        if (loan.getId() != null) {
+            Loan before = loanRepository.findById(loan.getId()).orElse(null);
+            Loan saved = loanRepository.save(loan);
+            ledgerService.recordEvent("LOAN", String.valueOf(saved.getId()), "UPDATE", before, saved, resolveUserId());
+            return saved;
+        }
+        Loan saved = loanRepository.save(loan);
+        ledgerService.recordEvent("LOAN", String.valueOf(saved.getId()), "CREATE", null, saved, resolveUserId());
+        return saved;
     }
 
     public void deleteLoan(Long id) {
-        if (!loanRepository.existsById(id)) {
-            throw new com.finance_tracker.exception.ResourceNotFoundException("Loan", id);
-        }
+        Loan before = loanRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Loan", id));
         loanRepository.deleteById(id);
+        ledgerService.recordEvent("LOAN", String.valueOf(id), "DELETE", before, null, resolveUserId());
     }
 
     public BigDecimal getTotalLoanBalance() {

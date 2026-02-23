@@ -5,6 +5,7 @@ import com.finance_tracker.repository.InvestmentRepository;
 import com.finance_tracker.utils.strategy.PriceProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,26 @@ public class InvestmentService {
 
     private final InvestmentRepository investmentRepository;
     private final PriceProviderService priceProviderService;
+    private final LedgerService ledgerService;
+
+    private String resolveUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "system";
+    }
+
+    private String normalizeSymbol(String symbol) {
+        if (symbol == null) {
+            return null;
+        }
+        String normalized = symbol.trim().toUpperCase();
+        if (normalized.endsWith(".NS") || normalized.endsWith(".BO")) {
+            return normalized;
+        }
+        if (normalized.contains(".")) {
+            return normalized;
+        }
+        return normalized + ".NS";
+    }
 
     public List<Investment> getAllInvestments() {
         return investmentRepository.findAll();
@@ -37,17 +58,26 @@ public class InvestmentService {
     }
 
     public Investment saveInvestment(Investment investment) {
+        investment.setSymbol(normalizeSymbol(investment.getSymbol()));
         if (investment.getLastUpdated() == null) {
             investment.setLastUpdated(LocalDate.now());
         }
-        return investmentRepository.save(investment);
+        if (investment.getId() != null) {
+            Investment before = investmentRepository.findById(investment.getId()).orElse(null);
+            Investment saved = investmentRepository.save(investment);
+            ledgerService.recordEvent("INVESTMENT", String.valueOf(saved.getId()), "UPDATE", before, saved, resolveUserId());
+            return saved;
+        }
+        Investment saved = investmentRepository.save(investment);
+        ledgerService.recordEvent("INVESTMENT", String.valueOf(saved.getId()), "CREATE", null, saved, resolveUserId());
+        return saved;
     }
 
     public void deleteInvestment(Long id) {
-        if (!investmentRepository.existsById(id)) {
-            throw new com.finance_tracker.exception.ResourceNotFoundException("Investment", id);
-        }
+        Investment before = investmentRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Investment", id));
         investmentRepository.deleteById(id);
+        ledgerService.recordEvent("INVESTMENT", String.valueOf(id), "DELETE", before, null, resolveUserId());
     }
 
     public BigDecimal getTotalInvestmentValue() {
