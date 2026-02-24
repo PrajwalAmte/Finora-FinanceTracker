@@ -43,10 +43,10 @@ dist-ssr
 !.env.example
 
 # Backend Environment Files
-Finance_Tracker-API/.env
-Finance_Tracker-API/.env.local
-Finance_Tracker-API/.env.*
-!Finance_Tracker-API/.env.example
+Finora-API/.env
+Finora-API/.env.local
+Finora-API/.env.*
+!Finora-API/.env.example
 
 # Logs
 logs

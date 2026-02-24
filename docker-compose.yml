@@ -21,11 +21,11 @@ services:
 
   backend:
     build:
-      context: ./Finance_Tracker-API
+      context: ./Finora-API
       dockerfile: Dockerfile
     container_name: finance-tracker-backend
     env_file:
-      - ./Finance_Tracker-API/.env
+      - ./Finora-API/.env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance_tracker
       SPRING_DATASOURCE_USERNAME: postgres
@@ -42,7 +42,7 @@ services:
 
   frontend:
     build:
-      context: ./Finance_Tracker-UI
+      context: ./Finora-UI
       dockerfile: Dockerfile
       args:
         - VITE_API_BASE_URL=/api
