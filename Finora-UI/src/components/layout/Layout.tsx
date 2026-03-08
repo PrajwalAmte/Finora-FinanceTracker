@@ -17,6 +17,7 @@ export const Layout: React.FC = () => {
     if (path.startsWith('/loans')) return 'Loans';
     if (path.startsWith('/expenses')) return 'Expenses';
     if (path.startsWith('/profile')) return 'My Profile';
+    if (path.startsWith('/backup')) return 'Backup & Restore';
 
     return 'Finora';
   };
@@ -31,6 +32,7 @@ export const Layout: React.FC = () => {
     if (path.startsWith('/loans')) return 'Monitor your loans and EMIs';
     if (path.startsWith('/expenses')) return 'Track your daily expenses and spending patterns';
     if (path.startsWith('/profile')) return 'Your account details and settings';
+    if (path.startsWith('/backup')) return 'Export and import encrypted backups of your data';
 
     return undefined;
   };

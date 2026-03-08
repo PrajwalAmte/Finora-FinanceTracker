@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, TrendingUp, DollarSign, CreditCard, BarChart4, X, User, LogOut } from 'lucide-react';
+import { Home, TrendingUp, DollarSign, CreditCard, BarChart4, X, User, LogOut, HardDrive } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '../../utils/auth-context';
 import { toast } from '../../utils/notifications';
@@ -27,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
     { name: 'Loans', path: '/loans', icon: <CreditCard size={20} /> },
     { name: 'Expenses', path: '/expenses', icon: <DollarSign size={20} /> },
     { name: 'Profile', path: '/profile', icon: <User size={20} /> },
+    { name: 'Backup', path: '/backup', icon: <HardDrive size={20} /> },
   ];
 
   const handleLogout = () => {

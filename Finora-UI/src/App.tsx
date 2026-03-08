@@ -12,6 +12,7 @@ import { SipsPage } from './pages/SipsPage';
 import { LoansPage } from './pages/LoansPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { BackupPage } from './pages/BackupPage';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
               <Route path="loans" element={<LoansPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="backup" element={<BackupPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

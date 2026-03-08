@@ -1,6 +1,7 @@
 package com.finance_tracker.config;
 
 import com.finance_tracker.dto.ApiResponse;
+import com.finance_tracker.exception.BackupException;
 import com.finance_tracker.exception.BusinessLogicException;
 import com.finance_tracker.exception.ExternalApiException;
 import com.finance_tracker.exception.ResourceNotFoundException;
@@ -48,6 +49,13 @@ public class GlobalExceptionHandler {
         logger.error("External API error: {}", ex.getMessage());
         ApiResponse<Void> response = ApiResponse.error("External service unavailable", "EXTERNAL_API_ERROR");
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(BackupException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBackupException(BackupException ex) {
+        logger.error("Backup operation failed: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.error(ex.getMessage(), "BACKUP_ERROR");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
