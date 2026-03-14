@@ -12,6 +12,8 @@ public class StatementImportResultDTO {
     private int imported;
     private int updated;
     private int skipped;
-    // key = ISIN, value = human-readable reason (only populated for skipped rows)
+    // key = ISIN or symbol, value = human-readable reason (only populated for skipped rows)
     private Map<String, String> skippedReasons;
+    /** Non-fatal warnings surfaced to the user after import (e.g. missing scheme code). */
+    private java.util.List<String> warnings;
 }

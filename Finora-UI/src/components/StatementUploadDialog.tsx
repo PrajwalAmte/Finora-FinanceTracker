@@ -446,6 +446,19 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </details>
             )}
 
+            {result.warnings && result.warnings.length > 0 && (
+              <details open className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
+                <summary className="font-medium text-amber-900 dark:text-amber-300 cursor-pointer">
+                  {result.warnings.length} action(s) required
+                </summary>
+                <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-400">
+                  {result.warnings.map((w, i) => (
+                    <li key={i}>• {w}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
             <div className="flex justify-end pt-4">
               <Button onClick={handleClose}>Done</Button>
             </div>

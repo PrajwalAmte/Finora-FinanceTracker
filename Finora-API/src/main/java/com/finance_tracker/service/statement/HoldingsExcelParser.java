@@ -91,6 +91,7 @@ public class HoldingsExcelParser implements StatementParser {
         List<ParsedMFHolding> mfHoldings = new ArrayList<>();
         List<String>          warnings   = new ArrayList<>();
         int t1Count = 0;
+        int parsedSheetCount = 0;
 
         // Parse every sheet that has the expected column structure.
         // Zerodha Console exports Equity and Mutual Funds as separate sheets in one workbook.
@@ -103,8 +104,25 @@ public class HoldingsExcelParser implements StatementParser {
                 log.debug("Skipping sheet '{}': {}", sheet.getSheetName(), e.getMessage());
                 continue;
             }
+
+            // If we've already parsed at least one individual sheet, skip any sheet whose name
+            // looks like a combined/summary view — it's a superset of the individual sheets
+            // and would double-count every holding.
+            if (parsedSheetCount > 0) {
+                String sn = sheet.getSheetName().toLowerCase(java.util.Locale.ROOT);
+                if (sn.contains("combined") || sn.contains("all holding")
+                        || sn.contains("consolidated") || sn.contains("total holding")
+                        || sn.contains("all fund") || sn.contains("summary")) {
+                    log.debug("Skipping sheet '{}': combined/summary sheet", sheet.getSheetName());
+                    warnings.add("Sheet '" + sheet.getSheetName() + "' was skipped — "
+                            + "it appears to be a combined view of the other sheets.");
+                    continue;
+                }
+            }
+
             log.debug("Parsing sheet '{}': headerRow={}, isin={}, qty={}, avgCost={}",
                     sheet.getSheetName(), cols.headerRow, cols.isinCol, cols.qtyCol, cols.avgCostCol);
+            parsedSheetCount++;
 
             for (int r = cols.headerRow + 1; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
@@ -460,6 +478,16 @@ public class HoldingsExcelParser implements StatementParser {
                 merged.add(h);
             } else {
                 ParsedHolding existing = seen.get(key);
+                // If quantities are within 0.1% of each other, this is a copy from a combined/
+                // summary sheet — keep the first occurrence, do NOT sum.
+                BigDecimal qtyDiff = existing.getQuantity().subtract(h.getQuantity()).abs();
+                BigDecimal threshold = existing.getQuantity().multiply(new java.math.BigDecimal("0.001"));
+                if (qtyDiff.compareTo(threshold) <= 0) {
+                    warnings.add(existing.getName() + " appeared in multiple sheets with the same "
+                            + "quantity — duplicate (combined sheet) row skipped.");
+                    continue; // keep existing, discard duplicate
+                }
+                // Different quantities — genuinely separate accounts/folios: sum them.
                 BigDecimal totalQty  = existing.getQuantity().add(h.getQuantity());
                 BigDecimal totalCost = safeCostBasis(existing).add(safeCostBasis(h));
                 BigDecimal newAvg    = totalQty.compareTo(BigDecimal.ZERO) > 0
@@ -478,7 +506,8 @@ public class HoldingsExcelParser implements StatementParser {
                         .build();
                 seen.put(key, mergedH);
                 merged.add(mergedH);
-                warnings.add(existing.getName() + " appeared in multiple rows — quantities merged.");
+                warnings.add(existing.getName() + " found in multiple sheets with different "
+                        + "quantities — merged as separate account holdings.");
             }
         }
         holdings.clear();
@@ -498,6 +527,15 @@ public class HoldingsExcelParser implements StatementParser {
                 merged.add(h);
             } else {
                 ParsedMFHolding existing = seen.get(key);
+                // Same units within 0.1% — copy from a combined sheet, discard duplicate.
+                BigDecimal unitsDiff = existing.getUnits().subtract(h.getUnits()).abs();
+                BigDecimal threshold = existing.getUnits().multiply(new java.math.BigDecimal("0.001"));
+                if (unitsDiff.compareTo(threshold) <= 0) {
+                    warnings.add(existing.getSchemeName() + " appeared in multiple sheets with the "
+                            + "same units — duplicate (combined sheet) row skipped.");
+                    continue;
+                }
+                // Different units — separate folios: sum them.
                 BigDecimal totalUnits = existing.getUnits().add(h.getUnits());
                 BigDecimal totalCost  = safeMfCostBasis(existing).add(safeMfCostBasis(h));
                 BigDecimal newAvg     = totalUnits.compareTo(BigDecimal.ZERO) > 0
@@ -515,7 +553,8 @@ public class HoldingsExcelParser implements StatementParser {
                         .build();
                 seen.put(key, mergedH);
                 merged.add(mergedH);
-                warnings.add(existing.getSchemeName() + " appeared in multiple rows — units merged.");
+                warnings.add(existing.getSchemeName() + " found in multiple sheets with different "
+                        + "units — merged as separate folio holdings.");
             }
         }
         mfHoldings.clear();

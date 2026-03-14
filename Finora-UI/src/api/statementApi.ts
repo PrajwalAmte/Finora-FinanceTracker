@@ -47,6 +47,7 @@ export interface StatementImportResult {
   updated: number;
   skipped: number;
   skippedReasons: Record<string, string>;
+  warnings: string[];
 }
 
 const statementApi = {

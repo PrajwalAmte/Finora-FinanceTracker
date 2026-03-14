@@ -90,6 +90,7 @@ public class StatementImportService {
         int updated  = 0;
         int skipped  = 0;
         Map<String, String> skippedReasons = new HashMap<>();
+        List<String> warnings = new ArrayList<>();
 
         for (ParsedHolding h : safeList(request.getHoldings())) {
             String key = h.getIsin() != null ? h.getIsin() : h.getSymbol();
@@ -107,21 +108,33 @@ public class StatementImportService {
             imported += outcome.imported;
             updated  += outcome.updated;
             skipped  += outcome.skipped;
+            // Warn when MF was saved but has no scheme code — NAV won't auto-refresh
+            if ((outcome.imported > 0 || outcome.updated > 0)
+                    && h.getSchemeCode() == null && h.getIsin() == null) {
+                warnings.add("\""
+                        + h.getSchemeName()
+                        + "\" was imported without an ISIN or AMFI scheme code. "
+                        + "Current NAV won't refresh automatically — "
+                        + "edit this fund in the Investments page and enter the AMFI scheme code manually.");
+            }
         }
 
-        log.info("Statement import for user {}: imported={}, updated={}, skipped={}",
-                userId, imported, updated, skipped);
+        log.info("Statement import for user {}: imported={}, updated={}, skipped={}, warnings={}",
+                userId, imported, updated, skipped, warnings.size());
 
         return StatementImportResultDTO.builder()
                 .imported(imported)
                 .updated(updated)
                 .skipped(skipped)
                 .skippedReasons(skippedReasons)
+                .warnings(warnings)
                 .build();
     }
 
     private ImportOutcome saveHolding(ParsedHolding h, String statementType,
                                        Long userId, Map<String, String> skippedReasons) {
+        String key = h.getIsin() != null ? h.getIsin() : h.getSymbol();
+
         // Re-resolve status inside transaction (TOCTOU guard)
         Optional<Investment> existing;
         if (h.getIsin() != null) {
@@ -137,7 +150,7 @@ public class StatementImportService {
             Investment inv = existing.get();
             if (inv.getImportSource() == null) {
                 // Manual record — sacred, never overwrite.
-                skippedReasons.put(h.getIsin(),
+                skippedReasons.put(key,
                         "Manual entry — will not be overwritten by statement import. "
                                 + "Edit the record directly if you want to update it.");
                 return ImportOutcome.SKIP;
@@ -152,7 +165,7 @@ public class StatementImportService {
         } catch (Exception e) {
             // Catch DB unique-index violation from a concurrent import.
             if (isUniqueConstraintViolation(e)) {
-                skippedReasons.put(h.getIsin(),
+                skippedReasons.put(key,
                         "Concurrent import detected — another import already saved this holding. "
                                 + "Refresh and re-import if needed.");
                 return ImportOutcome.SKIP;
@@ -164,18 +177,28 @@ public class StatementImportService {
     private ImportOutcome saveMfHolding(ParsedMFHolding h, String statementType,
                                          Long userId, Map<String, String> skippedReasons) {
 
-        // Resolve scheme code if still null
-        String schemeCode = h.getSchemeCode() != null
-                ? h.getSchemeCode()
-                : amfiNavService.lookupSchemeCodeByIsin(h.getIsin()).orElse(null);
+        // Use a non-null key for error tracking
+        String key = h.getIsin() != null ? h.getIsin() : h.getSchemeName();
 
-        // Re-resolve status inside the transaction.
-        Optional<Investment> existing = investmentRepository.findByUserIdAndIsin(userId, h.getIsin());
+        // Resolve scheme code only when we have an ISIN to look up
+        String schemeCode = h.getSchemeCode() != null ? h.getSchemeCode()
+                : (h.getIsin() != null ? amfiNavService.lookupSchemeCodeByIsin(h.getIsin()).orElse(null) : null);
+
+        // Re-resolve status inside the transaction — dedup by ISIN if present, else by symbol
+        Optional<Investment> existing;
+        if (h.getIsin() != null) {
+            existing = investmentRepository.findByUserIdAndIsin(userId, h.getIsin());
+        } else {
+            // No ISIN (symbol-only CSV) — dedup by the symbol we would assign
+            String mfSymbol = schemeCode != null ? schemeCode
+                    : (h.getSchemeName() != null ? h.getSchemeName() : "UNKNOWN_MF");
+            existing = investmentRepository.findFirstByUserIdAndSymbol(userId, mfSymbol);
+        }
 
         if (existing.isPresent()) {
             Investment inv = existing.get();
             if (inv.getImportSource() == null) {
-                skippedReasons.put(h.getIsin(),
+                skippedReasons.put(key,
                         "Manual entry — will not be overwritten by statement import.");
                 return ImportOutcome.SKIP;
             }
@@ -188,7 +211,7 @@ public class StatementImportService {
             return insertMfHolding(h, schemeCode, statementType, userId);
         } catch (Exception e) {
             if (isUniqueConstraintViolation(e)) {
-                skippedReasons.put(h.getIsin(),
+                skippedReasons.put(key,
                         "Concurrent import detected — another import already saved this holding.");
                 return ImportOutcome.SKIP;
             }
