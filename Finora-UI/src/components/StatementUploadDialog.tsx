@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Button } from '../ui/Button';
-import { Dialog } from '../ui/Dialog';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { Badge } from '../ui/Badge';
+import { Button } from './ui/Button';
+import { Dialog } from './ui/Dialog';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { Badge } from './ui/Badge';
 import statementApi, {
   StatementPreviewResponse,
   ImportStatus,
   StatementConfirmRequest,
   StatementImportResult,
-} from '../../api/statementApi';
-import { toast } from '../../utils/notifications';
+} from '../api/statementApi';
+import { toast } from '../utils/notifications';
 
 type StatementType = 'CAS' | 'CAMS' | 'ZERODHA_EXCEL';
 
@@ -292,12 +292,13 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                           <td className="text-right p-2">₹{e.averageCost.toFixed(2)}</td>
                           <td className="p-2">
                             <Badge
-                              variant={
-                                e.importStatus === ImportStatus.NEW
-                                  ? 'success'
-                                  : e.importStatus === ImportStatus.UPDATE
-                                    ? 'warning'
-                                    : 'secondary'
+                            size="sm"
+                            variant={
+                              e.importStatus === ImportStatus.NEW
+                                ? 'success'
+                                : e.importStatus === ImportStatus.UPDATE
+                                  ? 'warning'
+                                  : 'outline'
                               }
                             >
                               {e.importStatus}
@@ -348,12 +349,13 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                           <td className="text-right p-2">₹{m.costPerUnit.toFixed(2)}</td>
                           <td className="p-2">
                             <Badge
+                              size="sm"
                               variant={
                                 m.importStatus === ImportStatus.NEW
                                   ? 'success'
                                   : m.importStatus === ImportStatus.UPDATE
                                     ? 'warning'
-                                    : 'secondary'
+                                    : 'outline'
                               }
                             >
                               {m.importStatus}
@@ -374,7 +376,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                   {preview.warnings.length} warnings
                 </summary>
                 <ul className="mt-2 space-y-1 text-sm text-amber-800">
-                  {preview.warnings.map((w, i) => (
+                  {preview.warnings.map((w: string, i: number) => (
                     <li key={i}>• {w}</li>
                   ))}
                 </ul>
@@ -417,9 +419,9 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               <details className="p-3 bg-gray-50 border rounded">
                 <summary className="font-medium cursor-pointer">Skipped Items</summary>
                 <ul className="mt-2 space-y-1 text-sm text-gray-700">
-                  {Object.entries(result.skippedReasons).map(([id, reason]) => (
+                  {Object.entries(result.skippedReasons).map(([id, reason]: [string, unknown]) => (
                     <li key={id}>
-                      <span className="font-mono text-xs">{id}</span>: {reason}
+                      <span className="font-mono text-xs">{id}</span>: {String(reason)}
                     </li>
                   ))}
                 </ul>
