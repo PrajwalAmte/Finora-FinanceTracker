@@ -7,7 +7,6 @@ import com.finance_tracker.model.Investment;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class InvestmentMapper {
@@ -36,13 +35,15 @@ public class InvestmentMapper {
                 .currentValue(investment.getCurrentValue())
                 .profitLoss(investment.getProfitLoss())
                 .returnPercentage(investment.getReturnPercentage())
+                .isin(investment.getIsin())
+                .importSource(investment.getImportSource())
                 .build();
     }
 
     public List<InvestmentResponseDTO> toDTOList(List<Investment> investments) {
         return investments.stream()
                 .map(this::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
 

@@ -24,7 +24,7 @@ public class Investment {
 
     @Enumerated(EnumType.STRING)
     @NotNull
-    private InvestmentType type; // STOCK, MUTUAL_FUND, etc.
+    private InvestmentType type;
 
     @Digits(integer = 13, fraction = 6)
     @DecimalMin(value = "0.0", inclusive = false)
@@ -46,6 +46,13 @@ public class Investment {
 
     @Column(name = "user_id")
     private Long userId;
+
+    // null for manual entries; DB partial unique index on (user_id, isin) prevents duplicate imports
+    private String isin;
+
+    // null = manual (sacred, never overwritten); non-null = CAS / CAMS / ZERODHA_EXCEL / etc.
+    @Column(name = "import_source")
+    private String importSource;
 
     // Helper methods
     public BigDecimal getCurrentValue() {

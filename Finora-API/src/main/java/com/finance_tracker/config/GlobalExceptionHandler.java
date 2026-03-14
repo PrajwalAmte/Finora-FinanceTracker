@@ -5,6 +5,7 @@ import com.finance_tracker.exception.BackupException;
 import com.finance_tracker.exception.BusinessLogicException;
 import com.finance_tracker.exception.ExternalApiException;
 import com.finance_tracker.exception.ResourceNotFoundException;
+import com.finance_tracker.exception.StatementParseException;
 import com.finance_tracker.exception.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @ControllerAdvice
@@ -56,6 +58,19 @@ public class GlobalExceptionHandler {
         logger.error("Backup operation failed: {}", ex.getMessage());
         ApiResponse<Void> response = ApiResponse.error(ex.getMessage(), "BACKUP_ERROR");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(StatementParseException.class)
+    public ResponseEntity<ApiResponse<List<String>>> handleStatementParseException(StatementParseException ex) {
+        logger.warn("Statement parse error: {}", ex.getMessage());
+        ApiResponse<List<String>> response = ApiResponse.<List<String>>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .data(ex.getRowErrors().isEmpty() ? null : ex.getRowErrors())
+                .errorCode("STATEMENT_PARSE_ERROR")
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

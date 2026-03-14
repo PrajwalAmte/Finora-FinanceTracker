@@ -14,7 +14,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -68,10 +67,6 @@ public class InvestmentService {
         return investment;
     }
 
-    public Optional<Investment> findInvestmentById(Long id) {
-        return investmentRepository.findById(id);
-    }
-
     public Investment saveInvestment(Investment investment) {
         Long userId = resolveUserId();
         investment.setSymbol(normalizeSymbol(investment.getSymbol()));
@@ -116,40 +111,35 @@ public class InvestmentService {
     @Transactional
     public void updateCurrentPrices() {
         logger.info("Starting price update for all investments");
-        List<Investment> investments = investmentRepository.findAll(); // system-level: all users
+        List<Investment> investments = investmentRepository.findAll();
         int updatedCount = 0;
         int failedCount = 0;
 
         for (Investment investment : investments) {
             try {
-                String symbol = investment.getSymbol();
-                com.finance_tracker.model.InvestmentType type = investment.getType();
-
-                BigDecimal currentPrice = priceProviderService.fetchPrice(symbol, type);
+                BigDecimal currentPrice = priceProviderService.fetchPrice(
+                        investment.getSymbol(), investment.getType());
 
                 if (currentPrice != null && currentPrice.compareTo(BigDecimal.ZERO) > 0) {
-
                     BigDecimal scaledPrice = currentPrice.setScale(6, RoundingMode.HALF_UP);
-
-                    String integerPartStr = scaledPrice.toBigInteger().toString();
-                    if (integerPartStr.length() > 13) {
-                        logger.warn("Price for {} exceeds 13 integer digits: {}. Skipping update.", symbol, scaledPrice);
+                    // guard against values that exceed the column's 13-integer-digit precision
+                    if (scaledPrice.toBigInteger().toString().length() > 13) {
+                        logger.warn("Price for {} exceeds column precision: {}. Skipping.",
+                                investment.getSymbol(), scaledPrice);
                         failedCount++;
                         continue;
                     }
-                    
                     investment.setCurrentPrice(scaledPrice);
                     investment.setLastUpdated(LocalDate.now());
                     investmentRepository.save(investment);
                     updatedCount++;
-                    logger.debug("Updated price for {}: {}", symbol, scaledPrice);
                 } else {
                     failedCount++;
-                    logger.error("Failed to get valid price for {} from all providers", symbol);
+                    logger.error("No valid price for {} from any provider", investment.getSymbol());
                 }
             } catch (Exception e) {
                 failedCount++;
-                logger.error("Error in price update process for {}: {}", investment.getSymbol(), e.getMessage());
+                logger.error("Error updating price for {}: {}", investment.getSymbol(), e.getMessage());
             }
         }
 

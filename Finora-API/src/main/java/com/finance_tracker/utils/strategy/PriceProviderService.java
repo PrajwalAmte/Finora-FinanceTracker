@@ -22,27 +22,17 @@ public class PriceProviderService {
 
     public BigDecimal fetchPrice(String symbol, InvestmentType type) {
         for (PriceProviderStrategy provider : priceProviders) {
-            if (!provider.isAvailable()) {
-                logger.debug("Skipping {} provider - not available", provider.getProviderName());
-                continue;
-            }
-            
+            if (!provider.isAvailable()) continue;
             try {
-                logger.debug("Attempting to fetch price for {} using {}", symbol, provider.getProviderName());
                 BigDecimal price = provider.fetchPrice(symbol, type);
-                
                 if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
-                    logger.info("Successfully fetched price for {} using {}: {}", symbol, provider.getProviderName(), price);
                     return price;
-                } else {
-                    logger.warn("Failed to get valid price for {} from {}", symbol, provider.getProviderName());
                 }
             } catch (Exception e) {
-                logger.warn("Error fetching price from {} for {}: {}", provider.getProviderName(), symbol, e.getMessage());
+                logger.warn("Price fetch failed for {} via {}: {}", symbol, provider.getProviderName(), e.getMessage());
             }
         }
-        
-        logger.error("Failed to get valid price for {} from all providers", symbol);
+        logger.error("No valid price for {} from any provider", symbol);
         return null;
     }
 }

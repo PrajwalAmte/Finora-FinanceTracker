@@ -41,6 +41,13 @@ public class Sip {
     @Column(name = "user_id")
     private Long userId;
 
+    // null for manually created SIP records
+    private String isin;
+
+    // null = manual (sacred); CAS / CAMS for statement-imported rows
+    @Column(name = "import_source")
+    private String importSource;
+
     // Helper methods
     public BigDecimal getCurrentValue() {
         return totalUnits.multiply(currentNav);
@@ -51,10 +58,8 @@ public class Sip {
             return 0;
         }
 
-        // If lastInvestmentDate is null, calculate based on current date instead
         LocalDate endDate = lastInvestmentDate != null ? lastInvestmentDate : LocalDate.now();
 
-        // If the start date is in the future, return 0
         if (startDate.isAfter(endDate)) {
             return 0;
         }

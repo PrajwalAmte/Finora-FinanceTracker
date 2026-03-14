@@ -6,7 +6,6 @@ import com.finance_tracker.model.Sip;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class SipMapper {
@@ -37,13 +36,15 @@ public class SipMapper {
                 .completedInstallments(sip.getCompletedInstallments())
                 .totalInvested(sip.getTotalInvested())
                 .profitLoss(sip.getProfitLoss())
+                .isin(sip.getIsin())
+                .importSource(sip.getImportSource())
                 .build();
     }
 
     public List<SipResponseDTO> toDTOList(List<Sip> sips) {
         return sips.stream()
                 .map(this::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
 

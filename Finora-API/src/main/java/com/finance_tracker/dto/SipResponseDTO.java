@@ -27,5 +27,8 @@ public class SipResponseDTO {
     private Integer completedInstallments;
     private BigDecimal totalInvested;
     private BigDecimal profitLoss;
+    /** NULL = manual entry; non-null = CAS / CAMS */
+    private String isin;
+    private String importSource;
 }
 
