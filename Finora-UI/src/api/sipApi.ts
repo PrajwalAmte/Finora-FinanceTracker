@@ -61,5 +61,16 @@ export const sipApi = {
       console.error('Failed to fetch SIP summary:', error);
       throw error;
     }
-  }
+  },
+
+  /** Records the current month's installment payment for a SIP. */
+  pay: async (id: number): Promise<Sip> => {
+    try {
+      const response = await apiClient.post(`${BASE_PATH}/${id}/pay`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to record payment for SIP ${id}:`, error);
+      throw error;
+    }
+  },
 };

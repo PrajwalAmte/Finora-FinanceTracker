@@ -351,7 +351,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         <th className="text-left p-2">Scheme Code</th>
                         <th className="text-left p-2">Scheme Name</th>
                         <th className="text-right p-2">Units</th>
-                        <th className="text-right p-2">Cost/Unit</th>
+                        <th className="text-right p-2">Avg Cost</th>
+                        <th className="text-right p-2">NAV</th>
                         <th className="text-left p-2">Status</th>
                       </tr>
                     </thead>
@@ -371,6 +372,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                           <td className="p-2">{m.schemeName}</td>
                           <td className="text-right p-2">{m.units.toFixed(2)}</td>
                           <td className="text-right p-2">₹{m.avgCost != null ? m.avgCost.toFixed(2) : '—'}</td>
+                          <td className="text-right p-2 text-blue-600 dark:text-blue-400">{m.nav != null ? `₹${m.nav.toFixed(2)}` : '—'}</td>
                           <td className="p-2">
                             <Badge
                               size="sm"

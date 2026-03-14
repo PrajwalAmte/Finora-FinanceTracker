@@ -1,6 +1,7 @@
 package com.finance_tracker.service;
 
 import com.finance_tracker.model.Investment;
+import com.finance_tracker.model.InvestmentType;
 import com.finance_tracker.repository.InvestmentRepository;
 import com.finance_tracker.utils.strategy.PriceProviderService;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ public class InvestmentService {
 
     private final InvestmentRepository investmentRepository;
     private final PriceProviderService priceProviderService;
+    private final AmfiNavService amfiNavService;
     private final LedgerService ledgerService;
 
     private Long resolveUserId() {
@@ -117,8 +119,26 @@ public class InvestmentService {
 
         for (Investment investment : investments) {
             try {
-                BigDecimal currentPrice = priceProviderService.fetchPrice(
-                        investment.getSymbol(), investment.getType());
+                BigDecimal currentPrice;
+
+                // Mutual funds: fetch live NAV from AMFI using the scheme code stored in symbol
+                if (investment.getType() == InvestmentType.MUTUAL_FUND) {
+                    if (investment.getSymbol() == null || investment.getSymbol().isBlank()) {
+                        logger.debug("Skipping MF price update for '{}' — no scheme code", investment.getName());
+                        failedCount++;
+                        continue;
+                    }
+                    currentPrice = amfiNavService.getNavBySchemeCode(investment.getSymbol()).orElse(null);
+                    if (currentPrice == null) {
+                        logger.warn("No AMFI NAV found for MF '{}' (scheme code: {})",
+                                investment.getName(), investment.getSymbol());
+                        failedCount++;
+                        continue;
+                    }
+                } else {
+                    currentPrice = priceProviderService.fetchPrice(
+                            investment.getSymbol(), investment.getType());
+                }
 
                 if (currentPrice != null && currentPrice.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal scaledPrice = currentPrice.setScale(6, RoundingMode.HALF_UP);

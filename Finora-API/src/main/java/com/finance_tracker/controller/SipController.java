@@ -68,4 +68,10 @@ public class SipController {
                 .totalProfitLoss(totalProfitLoss)
                 .build();
     }
+
+    /** Records a manual monthly installment payment for a SIP. */
+    @PostMapping("/{id}/pay")
+    public SipResponseDTO recordPayment(@PathVariable Long id) {
+        return sipMapper.toDTO(sipService.recordPayment(id));
+    }
 }

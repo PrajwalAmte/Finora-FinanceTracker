@@ -117,6 +117,10 @@ public class SipService {
 
             for (Sip sip : sips) {
                 try {
+                    if (sip.getSchemeCode() == null || sip.getSchemeCode().isBlank()) {
+                        logger.debug("Skipping NAV update for SIP '{}' — no scheme code", sip.getName());
+                        continue;
+                    }
                     BigDecimal nav = navData.get(sip.getSchemeCode());
                     if (nav != null && nav.compareTo(BigDecimal.ZERO) > 0) {
                         sip.setCurrentNav(nav);
@@ -189,6 +193,33 @@ public class SipService {
         LocalDate lastInvestment = sip.getLastInvestmentDate();
         return lastInvestment.getMonth() != today.getMonth()
                 || lastInvestment.getYear() != today.getYear();
+    }
+
+    /**
+     * Records a manual monthly SIP payment made by the user.
+     * Adds units = monthlyAmount / currentNav and sets lastInvestmentDate = today.
+     */
+    @Transactional
+    public Sip recordPayment(Long id) {
+        Long userId = resolveUserId();
+        Sip sip = sipRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Sip", id));
+        validateOwnership(sip.getUserId(), userId);
+
+        BigDecimal currentNav = sip.getCurrentNav();
+        if (currentNav != null && currentNav.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal unitsAdded = sip.getMonthlyAmount()
+                    .divide(currentNav, 8, RoundingMode.HALF_UP);
+            BigDecimal existing = sip.getTotalUnits() != null ? sip.getTotalUnits() : BigDecimal.ZERO;
+            sip.setTotalUnits(existing.add(unitsAdded));
+        }
+        LocalDate today = LocalDate.now();
+        sip.setLastInvestmentDate(today);
+        sip.setLastUpdated(today);
+
+        Sip saved = sipRepository.save(sip);
+        ledgerService.recordEvent("SIP", String.valueOf(id), "PAY", null, saved, String.valueOf(userId));
+        return saved;
     }
 
 }

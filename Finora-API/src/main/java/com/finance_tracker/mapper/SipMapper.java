@@ -16,7 +16,10 @@ public class SipMapper {
         sip.setSchemeCode(dto.getSchemeCode());
         sip.setMonthlyAmount(dto.getMonthlyAmount());
         sip.setStartDate(dto.getStartDate());
-        sip.setDurationMonths(dto.getDurationMonths());
+        // Default to 120 months (10 years) when not specified
+        sip.setDurationMonths(dto.getDurationMonths() != null ? dto.getDurationMonths() : 120);
+        sip.setIsin(dto.getIsin());
+        sip.setImportSource(dto.getImportSource());
         return sip;
     }
 

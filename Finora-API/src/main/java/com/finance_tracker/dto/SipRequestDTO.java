@@ -14,7 +14,7 @@ public class SipRequestDTO {
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank(message = "Scheme code is required")
+    // Optional: needed for AMFI NAV auto-refresh; can be null for import-derived SIPs
     private String schemeCode;
 
     @NotNull(message = "Monthly amount is required")
@@ -24,7 +24,11 @@ public class SipRequestDTO {
 
     private LocalDate startDate;
 
-    @NotNull(message = "Duration in months is required")
+    // Optional — defaults to 120 months (10 years) when null
     private Integer durationMonths;
+
+    // For SIPs created from MF import
+    private String isin;
+    private String importSource;
 }
 

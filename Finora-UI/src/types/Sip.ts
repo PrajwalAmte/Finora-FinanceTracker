@@ -3,7 +3,7 @@ export interface Sip {
   name: string;
   schemeCode: string;
   monthlyAmount: number;
-  startDate: string; // ISO date string
+  startDate: string; // ISO date string — day of month encodes the monthly payment day
   durationMonths: number;
   currentNav: number;
   totalUnits: number;
@@ -11,7 +11,7 @@ export interface Sip {
   lastInvestmentDate?: string; // ISO date string
   isin?: string; // From statement import
   importSource?: string; // 'CAS', 'CAMS', 'ZERODHA_EXCEL', or null for manual
-  
+
   // Computed properties
   currentValue?: number;
   completedInstallments?: number;

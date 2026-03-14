@@ -23,6 +23,7 @@ export const SipsPage: React.FC = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [payingId, setPayingId] = useState<number | null>(null);
   
   useEffect(() => {
     loadSips();
@@ -97,6 +98,38 @@ export const SipsPage: React.FC = () => {
       summary?.totalCurrentValue,
       summary?.totalProfitLoss
     );
+  };
+
+  // Returns true if today is within ±3 days of this SIP's payment day AND not yet paid this month.
+  // The payment day is derived from startDate's day-of-month.
+  const isPaymentDue = (sip: Sip): boolean => {
+    if (!sip.startDate) return false;
+    const payDay = new Date(sip.startDate).getDate();
+    const today = new Date();
+    const dueThisMonth = new Date(today.getFullYear(), today.getMonth(), payDay);
+    const diffDays = Math.abs((today.getTime() - dueThisMonth.getTime()) / 86_400_000);
+    const paidThisMonth =
+      sip.lastInvestmentDate &&
+      new Date(sip.lastInvestmentDate) >= new Date(today.getFullYear(), today.getMonth(), 1);
+    return diffDays <= 3 && !paidThisMonth;
+  };
+
+  const handleMarkPaid = async (sip: Sip) => {
+    if (!sip.id) return;
+    try {
+      setPayingId(sip.id);
+      const updated = await sipApi.pay(sip.id);
+      setSips(prev => prev.map(s => s.id === updated.id ? updated : s));
+      // Refresh summary
+      const summaryData = await sipApi.getSummary();
+      setSummary(summaryData);
+      toast.success(`✓ Payment recorded for ${sip.name}`);
+    } catch (error) {
+      console.error('Failed to record payment:', error);
+      toast.error('Failed to record payment');
+    } finally {
+      setPayingId(null);
+    }
   };
 
   return (
@@ -193,10 +226,14 @@ export const SipsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-                    {filteredSips.map((sip) => (
+                    {filteredSips.map((sip) => {
+                      const due = isPaymentDue(sip);
+                      return (
                       <tr 
                         key={sip.id} 
-                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        className={`hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${
+                          due ? 'border-l-4 border-l-amber-400 dark:border-l-amber-500' : ''
+                        }`}
                       >
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-start">
@@ -206,6 +243,18 @@ export const SipsPage: React.FC = () => {
                             <div className="ml-3">
                               <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
                               <div className="text-xs text-neutral-500 dark:text-neutral-400">Started {formatDate(sip.startDate)}</div>
+                              {due && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">💰 Payment due this month</span>
+                                  <button
+                                    onClick={() => handleMarkPaid(sip)}
+                                    disabled={payingId === sip.id}
+                                    className="text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 disabled:opacity-50 transition"
+                                  >
+                                    {payingId === sip.id ? 'Saving…' : 'Mark Paid'}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -239,7 +288,8 @@ export const SipsPage: React.FC = () => {
                           />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

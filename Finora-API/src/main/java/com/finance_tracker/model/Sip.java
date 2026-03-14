@@ -18,8 +18,8 @@ public class Sip {
     @NotBlank
     private String name;
 
-    @NotBlank
-    private String schemeCode;
+    private String schemeCode;   // nullable for import-derived SIPs
+
 
     @Digits(integer = 17, fraction = 2)
     @DecimalMin(value = "0.0", inclusive = false)
