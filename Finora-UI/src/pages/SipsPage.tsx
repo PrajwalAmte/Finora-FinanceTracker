@@ -94,11 +94,13 @@ export const SipsPage: React.FC = () => {
     try {
       setIsRefreshing(true);
       await sipApi.refreshNavs();
-      toast.success('NAVs refreshed — reloading data…');
-      await loadSips();
+      toast.success('Refresh started — NAVs will update in ~10 seconds');
+      setTimeout(async () => {
+        await loadSips();
+        setIsRefreshing(false);
+      }, 10_000);
     } catch {
-      toast.error('Failed to refresh NAVs');
-    } finally {
+      toast.error('Failed to start NAV refresh');
       setIsRefreshing(false);
     }
   };

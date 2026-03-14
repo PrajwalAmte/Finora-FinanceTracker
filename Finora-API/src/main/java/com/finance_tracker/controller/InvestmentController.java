@@ -5,8 +5,11 @@ import com.finance_tracker.dto.InvestmentResponseDTO;
 import com.finance_tracker.dto.InvestmentSummaryDTO;
 import com.finance_tracker.mapper.InvestmentMapper;
 import com.finance_tracker.model.Investment;
+import com.finance_tracker.service.AmfiNavService;
 import com.finance_tracker.service.InvestmentService;
 import com.finance_tracker.service.SipService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -19,9 +22,12 @@ import java.util.Map;
 @RequestMapping("/api/investments")
 @RequiredArgsConstructor
 public class InvestmentController {
+    private static final Logger logger = LoggerFactory.getLogger(InvestmentController.class);
+
     private final InvestmentService investmentService;
     private final InvestmentMapper investmentMapper;
     private final SipService sipService;
+    private final AmfiNavService amfiNavService;
 
     @GetMapping
     public List<InvestmentResponseDTO> getAllInvestments() {
@@ -70,13 +76,31 @@ public class InvestmentController {
     }
 
     /**
-     * Manually triggers a live price/NAV refresh for all investments and SIPs.
-     * Useful after import or when the daily scheduler hasn't run yet.
+     * Fires a price/NAV refresh in a background thread and returns 202 immediately.
+     * The frontend should reload data after a short delay (e.g. 8–10 seconds).
      */
     @PostMapping("/refresh-prices")
     public ResponseEntity<Map<String, String>> refreshPrices() {
-        investmentService.updateCurrentPrices();
-        sipService.updateCurrentNavs();
-        return ResponseEntity.ok(Map.of("status", "Price refresh triggered successfully"));
+        Thread.ofVirtual().start(() -> {
+            try {
+                investmentService.updateCurrentPrices();
+                sipService.updateCurrentNavs();
+            } catch (Exception e) {
+                logger.error("Background price refresh failed: {}", e.getMessage(), e);
+            }
+        });
+        return ResponseEntity.accepted().body(Map.of(
+                "status", "refresh_started",
+                "message", "Price refresh running in background. Reload in ~10 seconds."
+        ));
+    }
+
+    /**
+     * Searches AMFI mutual fund schemes by name keyword.
+     * Returns up to 15 matches with schemeCode, name, and current NAV.
+     */
+    @GetMapping("/search-mf")
+    public List<Map<String, Object>> searchMf(@RequestParam(required = false, defaultValue = "") String q) {
+        return amfiNavService.searchByName(q);
     }
 }

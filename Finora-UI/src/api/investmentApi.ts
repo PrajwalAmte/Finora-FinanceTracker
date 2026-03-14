@@ -65,10 +65,21 @@ export const investmentApi = {
 
   refreshPrices: async (): Promise<void> => {
     try {
+      // Backend returns 202 Accepted immediately; refresh runs in background.
       await apiClient.post(`${BASE_PATH}/refresh-prices`);
     } catch (error) {
       console.error('Failed to trigger price refresh:', error);
       throw error;
     }
-  }
+  },
+
+  searchMf: async (q: string): Promise<{ schemeCode: string; name: string; nav: number }[]> => {
+    try {
+      const response = await apiClient.get(`${BASE_PATH}/search-mf`, { params: { q } });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to search mutual funds:', error);
+      return [];
+    }
+  },
 };

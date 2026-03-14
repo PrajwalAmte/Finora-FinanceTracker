@@ -105,11 +105,14 @@ export const InvestmentsPage: React.FC = () => {
     try {
       setIsRefreshing(true);
       await investmentApi.refreshPrices();
-      toast.success('NAVs refreshed — reloading data…');
-      await loadInvestments();
+      toast.success('Refresh started — prices will update in ~10 seconds');
+      // Backend runs async; wait then reload
+      setTimeout(async () => {
+        await loadInvestments();
+        setIsRefreshing(false);
+      }, 10_000);
     } catch {
-      toast.error('Failed to refresh prices');
-    } finally {
+      toast.error('Failed to start price refresh');
       setIsRefreshing(false);
     }
   };

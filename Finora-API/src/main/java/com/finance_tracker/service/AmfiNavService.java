@@ -13,8 +13,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -39,6 +42,7 @@ public class AmfiNavService {
     // Volatile so reads outside the synchronized block see the latest reference.
     private volatile Map<String, BigDecimal> navsBySchemeCode = new HashMap<>();
     private volatile Map<String, String> schemeCodeByIsin = new HashMap<>();
+    private volatile Map<String, String> schemeNameByCode = new HashMap<>();
     private volatile LocalDate cacheDate = null;
 
     // -------------------------------------------------------------------------
@@ -63,6 +67,29 @@ public class AmfiNavService {
         if (isin == null || isin.isBlank()) return Optional.empty();
         refreshIfStale();
         return Optional.ofNullable(schemeCodeByIsin.get(isin.trim().toUpperCase()));
+    }
+
+    /**
+     * Searches AMFI scheme names by keyword (case-insensitive substring match).
+     * Returns up to 15 results sorted by name, each containing schemeCode, name, nav.
+     */
+    public List<Map<String, Object>> searchByName(String query) {
+        if (query == null || query.trim().length() < 2) return List.of();
+        refreshIfStale();
+        String q = query.trim().toLowerCase();
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Map.Entry<String, String> entry : schemeNameByCode.entrySet()) {
+            if (entry.getValue().toLowerCase().contains(q)) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("schemeCode", entry.getKey());
+                item.put("name", entry.getValue());
+                item.put("nav", navsBySchemeCode.getOrDefault(entry.getKey(), java.math.BigDecimal.ZERO));
+                results.add(item);
+                if (results.size() == 50) break; // cap before sort
+            }
+        }
+        results.sort(Comparator.comparing(m -> (String) m.get("name")));
+        return results.size() > 15 ? results.subList(0, 15) : results;
     }
 
     /** Force-refreshes the cache; called by the scheduler before a NAV-update run. */
@@ -108,6 +135,7 @@ public class AmfiNavService {
 
             Map<String, BigDecimal> navs = new HashMap<>();
             Map<String, String> isinMap = new HashMap<>();
+            Map<String, String> nameMap = new HashMap<>();
 
             BufferedReader reader = new BufferedReader(new StringReader(response.body()));
             String line;
@@ -121,11 +149,13 @@ public class AmfiNavService {
                 String schemeCode = parts[0].trim();
                 String isin1      = parts[1].trim().toUpperCase(); // growth / div-payout
                 String isin2      = parts[2].trim().toUpperCase(); // div-reinvestment
+                String schemeName = parts[3].trim();
                 String navStr     = parts[4].trim();
 
                 if (schemeCode.isEmpty() || navStr.isEmpty() || !isNumeric(navStr)) continue;
 
                 navs.put(schemeCode, new BigDecimal(navStr));
+                if (!schemeName.isEmpty()) nameMap.put(schemeCode, schemeName);
 
                 if (isin1.matches(ISIN_REGEX)) {
                     isinMap.put(isin1, schemeCode);
@@ -135,9 +165,10 @@ public class AmfiNavService {
                 }
             }
 
-            // Atomic swap — both maps updated together.
+            // Atomic swap — all maps updated together.
             navsBySchemeCode = navs;
             schemeCodeByIsin = isinMap;
+            schemeNameByCode = nameMap;
             cacheDate = LocalDate.now();
 
             logger.info("AMFI cache refreshed: {} NAVs, {} ISINs indexed",
