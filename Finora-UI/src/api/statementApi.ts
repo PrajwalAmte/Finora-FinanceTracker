@@ -12,6 +12,7 @@ export interface ParsedHolding {
   symbol: string | null;
   quantity: number;
   avgCost: number | null;
+  ltp: number | null;
   importSource: string;
   detectedType: string;
   status: ImportStatus;

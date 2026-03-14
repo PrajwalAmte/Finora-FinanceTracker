@@ -143,7 +143,7 @@ public class StatementImportService {
                 return ImportOutcome.SKIP;
             }
             // Existing imported record — update in place.
-            return updateInvestment(inv, h.getQuantity(), h.getAvgCost(), userId);
+            return updateInvestment(inv, h.getQuantity(), h.getAvgCost(), h.getLtp(), userId);
         }
 
         // New record.
@@ -180,7 +180,7 @@ public class StatementImportService {
                 return ImportOutcome.SKIP;
             }
             // Update existing imported MF row.
-            return updateInvestment(inv, h.getUnits(), h.getAvgCost(), userId);
+            return updateInvestment(inv, h.getUnits(), h.getAvgCost(), h.getNav(), userId);
         }
 
         // New MF holding → investment row (type = MUTUAL_FUND).
@@ -197,13 +197,15 @@ public class StatementImportService {
     }
 
     private ImportOutcome updateInvestment(Investment inv, BigDecimal qty,
-                                            BigDecimal avgCost, Long userId) {
+                                            BigDecimal avgCost, BigDecimal ltp, Long userId) {
         if (qty != null)     inv.setQuantity(qty);
         if (avgCost != null) {
             inv.setPurchasePrice(avgCost);
-            if (inv.getCurrentPrice() == null || inv.getImportSource() != null) {
-                inv.setCurrentPrice(avgCost);
-            }
+        }
+        // Always update currentPrice from statement if we have ltp; otherwise fall back to avgCost
+        BigDecimal newCurrentPrice = ltp != null ? ltp : avgCost;
+        if (newCurrentPrice != null && inv.getImportSource() != null) {
+            inv.setCurrentPrice(newCurrentPrice);
         }
         inv.setLastUpdated(LocalDate.now());
         investmentService.saveInvestment(inv);
@@ -211,7 +213,8 @@ public class StatementImportService {
     }
 
     private ImportOutcome insertHolding(ParsedHolding h, String statementType, Long userId) {
-        BigDecimal price = h.getAvgCost() != null ? h.getAvgCost() : BigDecimal.ZERO;
+        BigDecimal purchasePrice = h.getAvgCost() != null ? h.getAvgCost() : BigDecimal.ZERO;
+        BigDecimal currentPrice  = h.getLtp()     != null ? h.getLtp()     : purchasePrice;
 
         Investment inv = new Investment();
         String nameVal   = h.getName()   != null ? h.getName()   : (h.getIsin() != null ? h.getIsin() : h.getSymbol());
@@ -220,8 +223,8 @@ public class StatementImportService {
         inv.setSymbol(symbolVal != null ? symbolVal : "UNKNOWN");
         inv.setType(h.getDetectedType() != null ? h.getDetectedType() : InvestmentType.STOCK);
         inv.setQuantity(h.getQuantity());
-        inv.setPurchasePrice(price);
-        inv.setCurrentPrice(price);
+        inv.setPurchasePrice(purchasePrice);
+        inv.setCurrentPrice(currentPrice);
         inv.setPurchaseDate(LocalDate.now());
         inv.setLastUpdated(LocalDate.now());
         inv.setIsin(h.getIsin());

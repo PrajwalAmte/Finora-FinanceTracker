@@ -15,6 +15,8 @@ public class ParsedHolding {
     private String symbol;
     private BigDecimal quantity;
     private BigDecimal avgCost;
+    /** Last traded price from the statement; used as currentPrice on import. Null if not provided. */
+    private BigDecimal ltp;
     private String importSource;  // written to import_source column
     private InvestmentType detectedType;
     private ImportStatus status;  // null until StatementImportService.preview() enriches it

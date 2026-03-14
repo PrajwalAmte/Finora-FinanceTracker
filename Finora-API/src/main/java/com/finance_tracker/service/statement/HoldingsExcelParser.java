@@ -145,7 +145,7 @@ public class HoldingsExcelParser implements StatementParser {
                 } else {
                     holdings.add(ParsedHolding.builder()
                             .isin(isin).name(name).symbol(symbol)
-                            .quantity(qty).avgCost(avgCost)
+                            .quantity(qty).avgCost(avgCost).ltp(ltp)
                             .importSource(statementType).detectedType(type).build());
                 }
             }
@@ -263,7 +263,7 @@ public class HoldingsExcelParser implements StatementParser {
             } else {
                 holdings.add(ParsedHolding.builder()
                         .isin(isin).name(name).symbol(symbol != null ? symbol : name)
-                        .quantity(qty).avgCost(avgCost)
+                        .quantity(qty).avgCost(avgCost).ltp(ltp)
                         .importSource(statementType).detectedType(type).build());
             }
         }
