@@ -54,6 +54,11 @@ public class Sip {
     @Column(name = "import_source")
     private String importSource;
 
+    // When set, this SIP is backed by the linked Investment (source of truth for units/NAV/value).
+    // NULL = standalone SIP with its own unit/NAV tracking.
+    @Column(name = "investment_id")
+    private Long investmentId;
+
     // Helper methods
     public BigDecimal getCurrentValue() {
         if (totalUnits == null || currentNav == null) return BigDecimal.ZERO;

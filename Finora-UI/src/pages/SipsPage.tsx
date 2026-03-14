@@ -265,7 +265,14 @@ export const SipsPage: React.FC = () => {
                               <LineChart size={16} className="text-primary-600 dark:text-primary-400" />
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
+                                {sip.investmentId && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+                                    Linked
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-neutral-500 dark:text-neutral-400">Next: {formatDate(sip.startDate)}</div>
                               {due && (
                                 <div className="flex items-center gap-2 mt-1">
@@ -322,12 +329,7 @@ export const SipsPage: React.FC = () => {
         </div>
         
         <Card title="SIP Allocation" isLoading={isLoading}>
-          <div className="h-64">
-            <PieChart
-              data={getSipData()}
-              height={250}
-            />
-          </div>
+          <PieChart data={getSipData()} />
         </Card>
       </div>
 

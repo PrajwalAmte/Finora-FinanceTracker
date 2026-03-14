@@ -23,6 +23,7 @@ public class SipMapper {
         if (dto.getTotalInvested() != null) sip.setTotalInvested(dto.getTotalInvested());
         sip.setIsin(dto.getIsin());
         sip.setImportSource(dto.getImportSource());
+        sip.setInvestmentId(dto.getInvestmentId());
         return sip;
     }
 
@@ -44,6 +45,7 @@ public class SipMapper {
                 .profitLoss(sip.getProfitLoss())
                 .isin(sip.getIsin())
                 .importSource(sip.getImportSource())
+                .investmentId(sip.getInvestmentId())
                 .build();
     }
 

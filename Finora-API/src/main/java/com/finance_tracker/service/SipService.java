@@ -90,18 +90,21 @@ public class SipService {
         ledgerService.recordEvent("SIP", String.valueOf(id), "DELETE", before, null, String.valueOf(userId));
     }
 
+    /**
+     * Current value of standalone SIPs only (investmentId == null).
+     * Linked SIPs are already counted via their backing Investment record.
+     */
     public BigDecimal getTotalSipValue() {
         return getAllSips().stream()
+                .filter(sip -> sip.getInvestmentId() == null)
                 .map(Sip::getCurrentValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal getTotalSipInvestment() {
         return getAllSips().stream()
-                .map(sip -> {
-                    BigDecimal totalInvested = sip.getTotalInvested();
-                    return totalInvested != null ? totalInvested : BigDecimal.ZERO;
-                })
+                .filter(sip -> sip.getInvestmentId() == null)
+                .map(sip -> sip.getTotalInvested() != null ? sip.getTotalInvested() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

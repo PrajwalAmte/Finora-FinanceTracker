@@ -1,8 +1,6 @@
 package com.finance_tracker.config;
 
-import com.finance_tracker.service.InvestmentService;
 import com.finance_tracker.service.LoanService;
-import com.finance_tracker.service.SipService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,20 +14,16 @@ public class StartupDataInitializer implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(StartupDataInitializer.class);
 
-    private final InvestmentService investmentService;
-    private final SipService sipService;
     private final LoanService loanService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        logger.info("Startup: refreshing investment prices, SIP NAVs, and loan balances");
+        logger.info("Startup: recalculating loan balances");
         try {
-            investmentService.updateCurrentPrices();
-            sipService.updateCurrentNavs();
             loanService.updateLoanBalances();
-            logger.info("Startup data refresh complete");
+            logger.info("Startup loan balance update complete");
         } catch (Exception e) {
-            logger.error("Startup data refresh failed (non-fatal): {}", e.getMessage(), e);
+            logger.error("Startup loan balance update failed (non-fatal): {}", e.getMessage(), e);
         }
     }
 }

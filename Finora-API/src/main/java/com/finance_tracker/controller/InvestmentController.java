@@ -3,6 +3,7 @@ package com.finance_tracker.controller;
 import com.finance_tracker.dto.InvestmentRequestDTO;
 import com.finance_tracker.dto.InvestmentResponseDTO;
 import com.finance_tracker.dto.InvestmentSummaryDTO;
+import com.finance_tracker.dto.InvestmentTradeRequestDTO;
 import com.finance_tracker.mapper.InvestmentMapper;
 import com.finance_tracker.model.Investment;
 import com.finance_tracker.service.AmfiNavService;
@@ -102,5 +103,37 @@ public class InvestmentController {
     @GetMapping("/search-mf")
     public List<Map<String, Object>> searchMf(@RequestParam(required = false, defaultValue = "") String q) {
         return amfiNavService.searchByName(q);
+    }
+
+    /**
+     * Add units to an existing investment.
+     * Recalculates the weighted-average buy price automatically.
+     *
+     * POST /api/investments/{id}/add-units
+     * Body: { "quantity": 10.5, "price": 150.00 }
+     */
+    @PostMapping("/{id}/add-units")
+    public InvestmentResponseDTO addUnits(
+            @PathVariable Long id,
+            @Valid @RequestBody InvestmentTradeRequestDTO dto) {
+        Investment updated = investmentService.addUnits(id, dto.getQuantity(), dto.getPrice());
+        return investmentMapper.toDTO(updated);
+    }
+
+    /**
+     * Sell units from an existing investment.
+     * - Returns 200 + updated investment when partially sold.
+     * - Returns 204 No Content when all units are sold (investment is deleted).
+     *
+     * POST /api/investments/{id}/sell-units
+     * Body: { "quantity": 5, "price": 200.00 }
+     */
+    @PostMapping("/{id}/sell-units")
+    public ResponseEntity<?> sellUnits(
+            @PathVariable Long id,
+            @Valid @RequestBody InvestmentTradeRequestDTO dto) {
+        return investmentService.sellUnits(id, dto.getQuantity(), dto.getPrice())
+                .<ResponseEntity<?>>map(inv -> ResponseEntity.ok(investmentMapper.toDTO(inv)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

@@ -38,6 +38,8 @@ public class FinanceSummaryFacade {
         LoanSummaryDTO loanSummary = getLoanSummary();
         SipSummaryDTO sipSummary = getSipSummary();
 
+        // investmentSummary.totalValue already includes linked MF investments (the ones SIPs track).
+        // sipSummary.totalCurrentValue only includes standalone SIPs (investmentId == null) to avoid double-counting.
         BigDecimal totalAssets = investmentSummary.getTotalValue()
                 .add(sipSummary.getTotalCurrentValue());
         BigDecimal totalLiabilities = loanSummary.getTotalBalance();

@@ -82,4 +82,33 @@ export const investmentApi = {
       return [];
     }
   },
+
+  /**
+   * Add units to an existing investment.
+   * Returns the updated investment with recalculated avg buy price.
+   */
+  addUnits: async (id: number, quantity: number, price: number): Promise<Investment> => {
+    try {
+      const response = await apiClient.post(`${BASE_PATH}/${id}/add-units`, { quantity, price });
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to add units to investment ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sell units from an existing investment.
+   * Returns the updated investment if partially sold, or null if all units were sold (investment deleted).
+   */
+  sellUnits: async (id: number, quantity: number, price: number): Promise<Investment | null> => {
+    try {
+      const response = await apiClient.post(`${BASE_PATH}/${id}/sell-units`, { quantity, price });
+      // 204 No Content = all units sold, investment deleted
+      return response.status === 204 ? null : response.data;
+    } catch (error) {
+      console.error(`Failed to sell units from investment ${id}:`, error);
+      throw error;
+    }
+  },
 };

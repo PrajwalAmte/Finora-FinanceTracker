@@ -20,6 +20,8 @@ export interface Sip {
   currentValue?: number;
   completedInstallments?: number;
   profitLoss?: number;
+  /** Set when this SIP is backed by a linked Investment (units/NAV/value come from there). */
+  investmentId?: number;
 }
 
 export interface SipSummary {

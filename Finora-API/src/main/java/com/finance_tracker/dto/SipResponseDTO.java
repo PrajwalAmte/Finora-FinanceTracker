@@ -30,5 +30,7 @@ public class SipResponseDTO {
     /** NULL = manual entry; non-null = CAS / CAMS */
     private String isin;
     private String importSource;
+    /** Non-null when this SIP is backed by a linked Investment record. */
+    private Long investmentId;
 }
 

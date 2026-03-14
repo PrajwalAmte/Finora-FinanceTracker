@@ -152,7 +152,7 @@ export const InvestmentsPage: React.FC = () => {
             onClick={handleRefreshPrices}
             disabled={isRefreshing}
           >
-            {isRefreshing ? 'Refreshing…' : 'Refresh NAVs'}
+            {isRefreshing ? 'Refreshing…' : 'Refresh Prices'}
           </Button>
           <Button
             variant="outline"
@@ -297,12 +297,7 @@ export const InvestmentsPage: React.FC = () => {
         </div>
         
         <Card title="Allocation by Type" isLoading={isLoading}>
-          <div className="h-64">
-            <PieChart
-              data={getInvestmentsByType()}
-              height={250}
-            />
-          </div>
+          <PieChart data={getInvestmentsByType()} />
         </Card>
       </div>
 

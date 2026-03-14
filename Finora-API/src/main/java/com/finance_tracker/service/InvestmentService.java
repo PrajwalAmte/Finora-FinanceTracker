@@ -199,4 +199,89 @@ public class InvestmentService {
 
         logger.info("Price update completed. Updated: {}, Failed: {}", updatedCount, failedCount);
     }
+
+    /**
+     * Adds units to an existing investment and recalculates the weighted-average buy price.
+     *
+     * new_avg = (old_qty × old_avg + add_qty × add_price) / (old_qty + add_qty)
+     */
+    @Transactional
+    public Investment addUnits(Long id, BigDecimal addQty, BigDecimal addPrice) {
+        Long userId = resolveUserId();
+        Investment inv = investmentRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Investment", id));
+        validateOwnership(inv.getUserId(), userId);
+
+        // Snapshot before state for the ledger
+        Investment before = snapshotOf(inv);
+
+        BigDecimal oldValue = inv.getQuantity().multiply(inv.getPurchasePrice());
+        BigDecimal addValue  = addQty.multiply(addPrice);
+        BigDecimal newQty    = inv.getQuantity().add(addQty);
+        BigDecimal newAvg    = oldValue.add(addValue).divide(newQty, 6, RoundingMode.HALF_UP);
+
+        inv.setQuantity(newQty.setScale(6, RoundingMode.HALF_UP));
+        inv.setPurchasePrice(newAvg);
+        inv.setLastUpdated(LocalDate.now());
+
+        Investment saved = investmentRepository.save(inv);
+        ledgerService.recordEvent("INVESTMENT", String.valueOf(id), "ADD_UNITS", before, saved, String.valueOf(userId));
+        return saved;
+    }
+
+    /**
+     * Sells units from an existing investment.
+     *
+     * - If sell_qty ≥ current_qty: the investment is deleted entirely; returns empty Optional.
+     * - Otherwise: quantity is reduced and the weighted-average buy price stays the same.
+     *
+     * @throws com.finance_tracker.exception.BusinessLogicException if sellQty is invalid.
+     */
+    @Transactional
+    public java.util.Optional<Investment> sellUnits(Long id, BigDecimal sellQty, BigDecimal sellPrice) {
+        Long userId = resolveUserId();
+        Investment inv = investmentRepository.findById(id)
+                .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Investment", id));
+        validateOwnership(inv.getUserId(), userId);
+
+        if (sellQty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new com.finance_tracker.exception.BusinessLogicException("Sell quantity must be greater than 0");
+        }
+
+        Investment before = snapshotOf(inv);
+
+        if (sellQty.compareTo(inv.getQuantity()) >= 0) {
+            // Sold all (or more than held) — remove the row entirely
+            investmentRepository.deleteById(id);
+            ledgerService.recordEvent("INVESTMENT", String.valueOf(id), "SELL_ALL", before, null, String.valueOf(userId));
+            return java.util.Optional.empty();
+        }
+
+        BigDecimal newQty = inv.getQuantity().subtract(sellQty).setScale(6, RoundingMode.HALF_UP);
+        inv.setQuantity(newQty);
+        inv.setLastUpdated(LocalDate.now());
+        // Avg buy price is unchanged (cost-basis stays the same per remaining unit)
+
+        Investment saved = investmentRepository.save(inv);
+        ledgerService.recordEvent("INVESTMENT", String.valueOf(id), "SELL_UNITS", before, saved, String.valueOf(userId));
+        return java.util.Optional.of(saved);
+    }
+
+    /** Creates a detached copy of an investment for ledger snapshots. */
+    private Investment snapshotOf(Investment src) {
+        Investment snap = new Investment();
+        snap.setId(src.getId());
+        snap.setName(src.getName());
+        snap.setSymbol(src.getSymbol());
+        snap.setType(src.getType());
+        snap.setQuantity(src.getQuantity());
+        snap.setPurchasePrice(src.getPurchasePrice());
+        snap.setCurrentPrice(src.getCurrentPrice());
+        snap.setPurchaseDate(src.getPurchaseDate());
+        snap.setLastUpdated(src.getLastUpdated());
+        snap.setUserId(src.getUserId());
+        snap.setIsin(src.getIsin());
+        snap.setImportSource(src.getImportSource());
+        return snap;
+    }
 }

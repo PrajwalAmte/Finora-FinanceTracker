@@ -38,5 +38,8 @@ public class SipRequestDTO {
     // For SIPs created from MF import
     private String isin;
     private String importSource;
+
+    // Links this SIP to an existing Investment (MF backed SIPs).
+    private Long investmentId;
 }
 
