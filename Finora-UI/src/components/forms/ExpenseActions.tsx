@@ -70,4 +70,3 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
     </>
   );
 };
-}; 
