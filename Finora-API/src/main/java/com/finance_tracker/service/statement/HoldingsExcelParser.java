@@ -110,24 +110,26 @@ public class HoldingsExcelParser implements StatementParser {
                 Row row = sheet.getRow(r);
                 if (isBlankRow(row)) continue;
 
-                String isin = cellString(row, cols.isinCol);
-                if (isin == null || isin.isBlank()) continue;
-                isin = isin.trim().toUpperCase();
-                if (!ISIN_PATTERN.matcher(isin).matches()) continue;
+                String isin = cols.isinCol >= 0 ? cellString(row, cols.isinCol) : null;
+                if (isin != null) {
+                    isin = isin.trim().toUpperCase();
+                    if (!ISIN_PATTERN.matcher(isin).matches()) isin = null;
+                }
 
-                String name = cols.nameCol >= 0 ? cellString(row, cols.nameCol) : null;
-                if (name == null || name.isBlank())
-                    name = cols.symbolCol >= 0 ? cellString(row, cols.symbolCol) : isin;
+                String symbol = cols.symbolCol >= 0 ? cellString(row, cols.symbolCol) : null;
+                String name   = cols.nameCol   >= 0 ? cellString(row, cols.nameCol)   : null;
+                if (name == null || name.isBlank()) name = symbol;
+                if (name == null || name.isBlank()) name = isin;
+                if (name == null || name.isBlank()) continue;
 
                 BigDecimal qty = cellDecimal(row, cols.qtyCol);
                 if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
-                    warnings.add("Skipped " + name + " (" + isin + ") — zero or missing quantity.");
+                    warnings.add("Skipped " + name + " — zero or missing quantity.");
                     continue;
                 }
 
                 BigDecimal avgCost = cols.avgCostCol >= 0 ? cellDecimal(row, cols.avgCostCol) : null;
                 BigDecimal ltp     = cols.ltpCol >= 0 ? cellDecimal(row, cols.ltpCol) : null;
-                String symbol      = cols.symbolCol >= 0 ? cellString(row, cols.symbolCol) : null;
 
                 if (cols.t1Col >= 0) {
                     BigDecimal t1 = cellDecimal(row, cols.t1Col);
@@ -365,8 +367,8 @@ public class HoldingsExcelParser implements StatementParser {
             Row row = sheet.getRow(r);
             if (row == null) continue;
 
-            boolean hasIsin = false;
-
+            // Evaluate each row independently as a candidate header row
+            int tIsin=-1, tQty=-1, tAvgCost=-1, tName=-1, tSymbol=-1, tLtp=-1, tT1=-1, tType=-1;
             for (Cell cell : row) {
                 String hdr = cellString(cell);
                 if (hdr == null || hdr.isBlank()) continue;
@@ -374,27 +376,37 @@ public class HoldingsExcelParser implements StatementParser {
                 int col = cell.getColumnIndex();
 
                 // Use first-match wins; lists are ordered most-specific to least-specific
-                if (cols.isinCol < 0    && matchAny(norm, ISIN_HEADERS))     { cols.isinCol    = col; hasIsin = true; }
-                else if (cols.qtyCol < 0     && matchAny(norm, QTY_HEADERS))      { cols.qtyCol     = col; }
-                else if (cols.avgCostCol < 0 && matchAny(norm, AVG_COST_HEADERS)) { cols.avgCostCol = col; }
-                else if (cols.nameCol < 0    && matchAny(norm, NAME_HEADERS))     { cols.nameCol    = col; }
-                else if (cols.symbolCol < 0  && matchAny(norm, SYMBOL_HEADERS))   { cols.symbolCol  = col; }
-                else if (cols.ltpCol < 0     && matchAny(norm, LTP_HEADERS))      { cols.ltpCol     = col; }
-                else if (cols.t1Col < 0      && matchAny(norm, T1_HEADERS))       { cols.t1Col      = col; }
-                else if (cols.typeCol < 0    && matchAny(norm, TYPE_HEADERS))      { cols.typeCol    = col; }
+                if      (tIsin    < 0 && matchAny(norm, ISIN_HEADERS))     tIsin    = col;
+                else if (tName    < 0 && matchAny(norm, NAME_HEADERS))     tName    = col;
+                else if (tSymbol  < 0 && matchAny(norm, SYMBOL_HEADERS))   tSymbol  = col;
+                else if (tQty     < 0 && matchAny(norm, QTY_HEADERS))      tQty     = col;
+                else if (tAvgCost < 0 && matchAny(norm, AVG_COST_HEADERS)) tAvgCost = col;
+                else if (tLtp     < 0 && matchAny(norm, LTP_HEADERS))      tLtp     = col;
+                else if (tT1      < 0 && matchAny(norm, T1_HEADERS))       tT1      = col;
+                else if (tType    < 0 && matchAny(norm, TYPE_HEADERS))     tType    = col;
             }
 
-            if (hasIsin) {
-                cols.headerRow = r;
+            // Header row must have Quantity + at least one identifier (ISIN, Name, or Symbol)
+            if (tQty >= 0 && (tIsin >= 0 || tName >= 0 || tSymbol >= 0)) {
+                cols.headerRow  = r;
+                cols.isinCol    = tIsin;
+                cols.qtyCol     = tQty;
+                cols.avgCostCol = tAvgCost;
+                cols.nameCol    = tName;
+                cols.symbolCol  = tSymbol;
+                cols.ltpCol     = tLtp;
+                cols.t1Col      = tT1;
+                cols.typeCol    = tType;
                 break;
             }
         }
 
         // Validate required columns
         List<String> missing = new ArrayList<>();
-        if (cols.isinCol    < 0) missing.add("ISIN");
-        if (cols.qtyCol     < 0) missing.add("Quantity (Qty / Shares / Units)");
+        if (cols.qtyCol < 0) missing.add("Quantity (Qty / Shares / Units)");
         if (cols.avgCostCol < 0) missing.add("Avg Cost (Avg. cost / Buy price / Purchase price)");
+        if (cols.isinCol < 0 && cols.nameCol < 0 && cols.symbolCol < 0)
+            missing.add("Instrument identifier (ISIN / Name / Symbol)");
 
         if (!missing.isEmpty()) {
             throw new StatementParseException(
@@ -422,9 +434,9 @@ public class HoldingsExcelParser implements StatementParser {
                 if (tl.contains("equity") || tl.contains("stock")) return InvestmentType.STOCK;
             }
         }
-        // ISIN prefix heuristic
-        if (isin.startsWith("INF")) return InvestmentType.MUTUAL_FUND;
-        if (isin.startsWith("IN0") || isin.startsWith("ING")) return InvestmentType.BOND;
+        // ISIN prefix heuristic (guard against null ISIN in symbol-only imports)
+        if (isin != null && isin.startsWith("INF")) return InvestmentType.MUTUAL_FUND;
+        if (isin != null && (isin.startsWith("IN0") || isin.startsWith("ING"))) return InvestmentType.BOND;
 
         // Name keyword heuristic
         String nl = name.toLowerCase();
