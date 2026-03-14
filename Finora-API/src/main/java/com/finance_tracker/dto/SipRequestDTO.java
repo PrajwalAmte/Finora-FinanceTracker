@@ -27,6 +27,10 @@ public class SipRequestDTO {
     // Optional — defaults to 120 months (10 years) when null
     private Integer durationMonths;
 
+    // Current NAV and total units — sent by frontend when creating from statement import
+    private BigDecimal currentNav;
+    private BigDecimal totalUnits;
+
     // For SIPs created from MF import
     private String isin;
     private String importSource;

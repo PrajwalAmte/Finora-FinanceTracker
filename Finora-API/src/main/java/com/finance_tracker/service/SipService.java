@@ -63,6 +63,10 @@ public class SipService {
             sip.setTotalUnits(BigDecimal.ZERO);
         }
 
+        if (sip.getCurrentNav() == null) {
+            sip.setCurrentNav(BigDecimal.ZERO);
+        }
+
         if (sip.getId() != null) {
             Sip before = sipRepository.findById(sip.getId()).orElse(null);
             if (before != null) validateOwnership(before.getUserId(), userId);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
 import { investmentApi } from '../../api/investmentApi';
 import { Investment } from '../../types/Investment';
 import { InvestmentForm } from './InvestmentForm';
@@ -20,7 +21,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
 
   const handleUpdate = async (data: Partial<Investment>) => {
     if (!investment.id) return;
-    
     try {
       setIsLoading(true);
       const updatedInvestment = await investmentApi.update(investment.id, data);
@@ -35,11 +35,7 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
 
   const handleDelete = async () => {
     if (!investment.id) return;
-    
-    if (!window.confirm('Are you sure you want to delete this investment?')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this investment?')) return;
     try {
       setIsLoading(true);
       await investmentApi.delete(investment.id);
@@ -51,10 +47,18 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Edit Investment</h3>
+  return (
+    <>
+      <div className="flex space-x-2">
+        <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isLoading}>
+          Edit
+        </Button>
+        <Button variant="danger" onClick={handleDelete} isLoading={isLoading}>
+          Delete
+        </Button>
+      </div>
+
+      <Dialog isOpen={isEditing} onClose={() => setIsEditing(false)} title="Edit Investment">
         <InvestmentForm
           initialData={investment}
           mode="edit"
@@ -62,26 +66,7 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
           onCancel={() => setIsEditing(false)}
           isLoading={isLoading}
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex space-x-2">
-      <Button
-        variant="outline"
-        onClick={() => setIsEditing(true)}
-        disabled={isLoading}
-      >
-        Edit
-      </Button>
-      <Button
-        variant="danger"
-        onClick={handleDelete}
-        isLoading={isLoading}
-      >
-        Delete
-      </Button>
-    </div>
+      </Dialog>
+    </>
   );
-}; 
+};

@@ -50,6 +50,7 @@ public class Sip {
 
     // Helper methods
     public BigDecimal getCurrentValue() {
+        if (totalUnits == null || currentNav == null) return BigDecimal.ZERO;
         return totalUnits.multiply(currentNav);
     }
 
@@ -68,6 +69,7 @@ public class Sip {
     }
 
     public BigDecimal getTotalInvested() {
+        if (monthlyAmount == null) return BigDecimal.ZERO;
         return monthlyAmount.multiply(new BigDecimal(getCompletedInstallments()));
     }
 

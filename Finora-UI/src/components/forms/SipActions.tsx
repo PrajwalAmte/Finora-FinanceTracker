@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
 import { sipApi } from '../../api/sipApi';
 import { Sip } from '../../types/Sip';
 import { SipForm } from './SipForm';
@@ -20,7 +21,6 @@ export const SipActions: React.FC<SipActionsProps> = ({
 
   const handleUpdate = async (data: Partial<Sip>) => {
     if (!sip.id) return;
-    
     try {
       setIsLoading(true);
       const updatedSip = await sipApi.update(sip.id, data);
@@ -35,11 +35,7 @@ export const SipActions: React.FC<SipActionsProps> = ({
 
   const handleDelete = async () => {
     if (!sip.id) return;
-    
-    if (!window.confirm('Are you sure you want to delete this SIP?')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this SIP?')) return;
     try {
       setIsLoading(true);
       await sipApi.delete(sip.id);
@@ -51,10 +47,18 @@ export const SipActions: React.FC<SipActionsProps> = ({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Edit SIP</h3>
+  return (
+    <>
+      <div className="flex space-x-2">
+        <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isLoading}>
+          Edit
+        </Button>
+        <Button variant="danger" onClick={handleDelete} isLoading={isLoading}>
+          Delete
+        </Button>
+      </div>
+
+      <Dialog isOpen={isEditing} onClose={() => setIsEditing(false)} title="Edit SIP">
         <SipForm
           initialData={sip}
           mode="edit"
@@ -62,26 +66,7 @@ export const SipActions: React.FC<SipActionsProps> = ({
           onCancel={() => setIsEditing(false)}
           isLoading={isLoading}
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex space-x-2">
-      <Button
-        variant="outline"
-        onClick={() => setIsEditing(true)}
-        disabled={isLoading}
-      >
-        Edit
-      </Button>
-      <Button
-        variant="danger"
-        onClick={handleDelete}
-        isLoading={isLoading}
-      >
-        Delete
-      </Button>
-    </div>
+      </Dialog>
+    </>
   );
-}; 
+};

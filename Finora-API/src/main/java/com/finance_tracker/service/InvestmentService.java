@@ -128,9 +128,22 @@ public class InvestmentService {
                         failedCount++;
                         continue;
                     }
+                    // Try symbol as AMFI scheme code first; if that fails and symbol looks like
+                    // an ISIN (starts with IN), resolve the scheme code via ISIN lookup.
                     currentPrice = amfiNavService.getNavBySchemeCode(investment.getSymbol()).orElse(null);
                     if (currentPrice == null) {
-                        logger.warn("No AMFI NAV found for MF '{}' (scheme code: {})",
+                        String sym = investment.getSymbol().replaceAll("\\.NS$|\\.BO$", "");
+                        String resolved = amfiNavService.lookupSchemeCodeByIsin(sym).orElse(null);
+                        if (resolved != null) {
+                            currentPrice = amfiNavService.getNavBySchemeCode(resolved).orElse(null);
+                            if (currentPrice != null) {
+                                // Correct the symbol so future refreshes use the scheme code directly
+                                investment.setSymbol(resolved);
+                            }
+                        }
+                    }
+                    if (currentPrice == null) {
+                        logger.warn("No AMFI NAV found for MF '{}' (symbol: {})",
                                 investment.getName(), investment.getSymbol());
                         failedCount++;
                         continue;

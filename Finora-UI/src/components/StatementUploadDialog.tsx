@@ -9,7 +9,9 @@ import statementApi, {
   ImportStatus,
   StatementConfirmRequest,
   StatementImportResult,
+  ParsedMFHolding,
 } from '../api/statementApi';
+import { sipApi } from '../api/sipApi';
 import { toast } from '../utils/notifications';
 
 type StatementType = 'CAS' | 'CAMS' | 'HOLDINGS_FILE';
@@ -35,7 +37,7 @@ interface StatementUploadDialogProps {
 }
 
 export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialogProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [statementType, setStatementType] = useState<StatementType>('CAS');
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
@@ -45,6 +47,11 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
   const [selectedMfs, setSelectedMfs] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<StatementImportResult | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Step 4: SIP setup for imported MFs
+  const [importedMfs, setImportedMfs] = useState<ParsedMFHolding[]>([]);
+  type SipSetup = { enabled: boolean; amount: string; startDate: string };
+  const [sipSetups, setSipSetups] = useState<Record<string, SipSetup>>({});
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -135,7 +142,28 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       };
       const res = await statementApi.confirm(req);
       setResult(res);
-      setStep(3);
+
+      // Collect MFs that were actually imported or updated (not skipped) to offer SIP setup
+      if (selectedMfs.size > 0) {
+        const mfsForSip = (preview?.mfHoldings ?? []).filter(m => {
+          const key = m.isin ?? m.schemeName;
+          return selectedMfs.has(key) && m.status !== ImportStatus.SKIP && m.status !== ImportStatus.SKIP_MANUAL;
+        });
+        if (mfsForSip.length > 0) {
+          setImportedMfs(mfsForSip);
+          const today = new Date().toISOString().split('T')[0];
+          const initialSetups: Record<string, SipSetup> = {};
+          mfsForSip.forEach(m => {
+            initialSetups[m.isin ?? m.schemeName] = { enabled: false, amount: '', startDate: today };
+          });
+          setSipSetups(initialSetups);
+          setStep(3); // show result first, then user clicks "Set up SIPs →"
+        } else {
+          setStep(3);
+        }
+      } else {
+        setStep(3);
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Import failed');
     } finally {
@@ -151,7 +179,47 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     setSelectedEquities(new Set());
     setSelectedMfs(new Set());
     setResult(null);
-    onClose(step === 3);
+    setImportedMfs([]);
+    setSipSetups({});
+    onClose(step === 3 || step === 4);
+  };
+
+  const handleSetupSips = async () => {
+    const toCreate = importedMfs.filter(m => {
+      const key = m.isin ?? m.schemeName;
+      return sipSetups[key]?.enabled && sipSetups[key]?.amount;
+    });
+
+    if (toCreate.length === 0) {
+      handleClose();
+      return;
+    }
+
+    setLoading(true);
+    let created = 0;
+    for (const m of toCreate) {
+      const key = m.isin ?? m.schemeName;
+      const setup = sipSetups[key];
+      try {
+        await sipApi.create({
+          name: m.schemeName,
+          schemeCode: m.schemeCode ?? '',
+          monthlyAmount: parseFloat(setup.amount),
+          startDate: setup.startDate,
+          durationMonths: 120,
+          currentNav: m.nav ?? 0,
+          totalUnits: m.units,
+          isin: m.isin,
+          importSource: getBackendType(statementType, file?.name ?? ''),
+        } as any);
+        created++;
+      } catch (e) {
+        toast.error(`Failed to create SIP for ${m.schemeName}`);
+      }
+    }
+    setLoading(false);
+    if (created > 0) toast.success(`${created} SIP${created > 1 ? 's' : ''} created`);
+    handleClose();
   };
 
   return (
@@ -462,7 +530,95 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
             )}
 
             <div className="flex justify-end pt-4">
-              <Button onClick={handleClose}>Done</Button>
+              {importedMfs.length > 0 ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleClose}>Skip</Button>
+                  <Button onClick={() => setStep(4)}>Set up SIPs →</Button>
+                </div>
+              ) : (
+                <Button onClick={handleClose}>Done</Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: SIP setup for imported MFs */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              For each mutual fund below, toggle it on if you invest in it via a monthly SIP. Enter the amount and the date your SIP deducts each month.
+            </p>
+
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {importedMfs.map(m => {
+                const key = m.isin ?? m.schemeName;
+                const setup = sipSetups[key] ?? { enabled: false, amount: '', startDate: '' };
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-lg border p-3 transition ${
+                      setup.enabled
+                        ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-neutral-200 dark:border-neutral-700'
+                    }`}
+                  >
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1 accent-blue-500"
+                        checked={setup.enabled}
+                        onChange={e =>
+                          setSipSetups(prev => ({
+                            ...prev,
+                            [key]: { ...prev[key], enabled: e.target.checked },
+                          }))
+                        }
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">{m.schemeName}</p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">{m.schemeCode ?? m.isin ?? '—'} · {m.units.toFixed(3)} units</p>
+                      </div>
+                    </label>
+
+                    {setup.enabled && (
+                      <div className="mt-3 grid grid-cols-2 gap-3 pl-7">
+                        <Input
+                          label="Monthly Amount (₹)"
+                          type="number"
+                          placeholder="e.g. 5000"
+                          value={setup.amount}
+                          onChange={e =>
+                            setSipSetups(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key], amount: e.target.value },
+                            }))
+                          }
+                          fullWidth
+                        />
+                        <Input
+                          label="SIP Start Date"
+                          type="date"
+                          value={setup.startDate}
+                          onChange={e =>
+                            setSipSetups(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key], startDate: e.target.value },
+                            }))
+                          }
+                          fullWidth
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={handleClose}>Skip</Button>
+              <Button onClick={handleSetupSips} isLoading={loading}>
+                Confirm SIPs
+              </Button>
             </div>
           </div>
         )}

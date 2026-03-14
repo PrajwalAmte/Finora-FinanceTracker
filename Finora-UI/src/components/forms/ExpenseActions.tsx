@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
 import { expenseApi } from '../../api/expenseApi';
 import { Expense } from '../../types/Expense';
 import { ExpenseForm } from './ExpenseForm';
@@ -20,7 +21,6 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
 
   const handleUpdate = async (data: Partial<Expense>) => {
     if (!expense.id) return;
-    
     try {
       setIsLoading(true);
       const updatedExpense = await expenseApi.update(expense.id, data);
@@ -35,11 +35,7 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
 
   const handleDelete = async () => {
     if (!expense.id) return;
-    
-    if (!window.confirm('Are you sure you want to delete this expense?')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this expense?')) return;
     try {
       setIsLoading(true);
       await expenseApi.delete(expense.id);
@@ -51,10 +47,18 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Edit Expense</h3>
+  return (
+    <>
+      <div className="flex space-x-2">
+        <Button variant="outline" onClick={() => setIsEditing(true)} disabled={isLoading}>
+          Edit
+        </Button>
+        <Button variant="danger" onClick={handleDelete} isLoading={isLoading}>
+          Delete
+        </Button>
+      </div>
+
+      <Dialog isOpen={isEditing} onClose={() => setIsEditing(false)} title="Edit Expense">
         <ExpenseForm
           initialData={expense}
           mode="edit"
@@ -62,26 +66,8 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
           onCancel={() => setIsEditing(false)}
           isLoading={isLoading}
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex space-x-2">
-      <Button
-        variant="outline"
-        onClick={() => setIsEditing(true)}
-        disabled={isLoading}
-      >
-        Edit
-      </Button>
-      <Button
-        variant="danger"
-        onClick={handleDelete}
-        isLoading={isLoading}
-      >
-        Delete
-      </Button>
-    </div>
+      </Dialog>
+    </>
   );
+};
 }; 
