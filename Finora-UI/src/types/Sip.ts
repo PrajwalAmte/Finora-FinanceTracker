@@ -9,6 +9,8 @@ export interface Sip {
   totalUnits: number;
   lastUpdated?: string; // ISO date string
   lastInvestmentDate?: string; // ISO date string
+  isin?: string; // From statement import
+  importSource?: string; // 'CAS', 'CAMS', 'ZERODHA_EXCEL', or null for manual
   
   // Computed properties
   currentValue?: number;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, Download, Search } from 'lucide-react';
+import { Plus, TrendingUp, Download, Search, Upload } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
 import { InvestmentForm } from '../components/forms/InvestmentForm';
 import { InvestmentActions } from '../components/forms/InvestmentActions';
+import { StatementUploadDialog } from '../components/StatementUploadDialog';
 import { Investment, InvestmentSummary } from '../types/Investment';
 import { investmentApi } from '../api/investmentApi';
 import { formatCurrency, formatDate, formatPercentage, getStatusColorClass } from '../utils/formatters';
@@ -20,31 +21,32 @@ export const InvestmentsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    const loadInvestments = async () => {
-      try {
-        setIsLoading(true);
-        const [investmentsData, summaryData] = await Promise.all([
-          investmentApi.getAll(),
-          investmentApi.getSummary()
-        ]);
-        setInvestments(investmentsData);
-        setSummary(summaryData);
-      } catch (error) {
-        console.error('Failed to load investments:', error);
-        setError('Failed to load investments');
-        toast.error('Failed to load investments');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     loadInvestments();
   }, []);
+
+  const loadInvestments = async () => {
+    try {
+      setIsLoading(true);
+      const [investmentsData, summaryData] = await Promise.all([
+        investmentApi.getAll(),
+        investmentApi.getSummary()
+      ]);
+      setInvestments(investmentsData);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('Failed to load investments:', error);
+      setError('Failed to load investments');
+      toast.error('Failed to load investments');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Filter investments based on search term
   const filteredInvestments = investments.filter(investment => 
@@ -135,6 +137,13 @@ export const InvestmentsPage: React.FC = () => {
             Export
           </Button>
           <Button
+            variant="outline"
+            iconLeft={<Upload size={18} />}
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            Import Statement
+          </Button>
+          <Button
             iconLeft={<Plus size={18} />}
             onClick={() => {
               setFormKey(prev => prev + 1);
@@ -208,9 +217,21 @@ export const InvestmentsPage: React.FC = () => {
                             </div>
                             <div className="ml-3">
                               <div className="text-sm font-medium text-neutral-900 dark:text-white">{investment.name}</div>
-                              <div className="flex items-center">
+                              <div className="flex items-center gap-2">
                                 <div className="text-xs text-neutral-500 dark:text-neutral-400">{investment.symbol}</div>
-                                <Badge variant="outline" size="sm" className="ml-2">{investment.type}</Badge>
+                                <Badge variant="outline" size="sm">{investment.type}</Badge>
+                                {investment.importSource && (
+                                  <Badge 
+                                    size="sm"
+                                    variant={
+                                      investment.importSource === 'CAS' ? 'default' :
+                                      investment.importSource === 'CAMS' ? 'secondary' :
+                                      'outline'
+                                    }
+                                  >
+                                    {investment.importSource === 'ZERODHA_EXCEL' ? 'Zerodha' : investment.importSource}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -273,6 +294,17 @@ export const InvestmentsPage: React.FC = () => {
           isLoading={isSubmitting}
         />
       </Dialog>
+
+      {/* Import Statement Dialog */}
+      <StatementUploadDialog
+        isOpen={isImportDialogOpen}
+        onClose={(success) => {
+          setIsImportDialogOpen(false);
+          if (success) {
+            loadInvestments();
+          }
+        }}
+      />
     </div>
   );
 };

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, LineChart, Download, Search } from 'lucide-react';
+import { Plus, LineChart, Download, Search, Upload } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Dialog } from '../components/ui/Dialog';
 import { SipForm } from '../components/forms/SipForm';
 import { SipActions } from '../components/forms/SipActions';
+import { StatementUploadDialog } from '../components/StatementUploadDialog';
 import { Sip, SipSummary } from '../types/Sip';
 import { sipApi } from '../api/sipApi';
 import { formatCurrency, formatDate, getStatusColorClass, formatPercentage } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { generateSipReport } from '../utils/excel-generator';
+import { toast } from '../utils/notifications';
 
 export const SipsPage: React.FC = () => {
   const [sips, setSips] = useState<Sip[]>([]);
@@ -18,28 +20,30 @@ export const SipsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
-    const loadSips = async () => {
-      try {
-        setIsLoading(true);
-        const [sipsData, summaryData] = await Promise.all([
-          sipApi.getAll(),
-          sipApi.getSummary()
-        ]);
-        setSips(sipsData);
-        setSummary(summaryData);
-      } catch (error) {
-        console.error('Failed to load SIPs:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     loadSips();
   }, []);
+
+  const loadSips = async () => {
+    try {
+      setIsLoading(true);
+      const [sipsData, summaryData] = await Promise.all([
+        sipApi.getAll(),
+        sipApi.getSummary()
+      ]);
+      setSips(sipsData);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('Failed to load SIPs:', error);
+      toast.error('Failed to load SIPs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Filter SIPs based on search term
   const filteredSips = sips.filter(sip => 
@@ -115,6 +119,13 @@ export const SipsPage: React.FC = () => {
             onClick={handleExportExcel}
           >
             Export
+          </Button>
+          <Button
+            variant="outline"
+            iconLeft={<Upload size={18} />}
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            Import Statement
           </Button>
           <Button
             iconLeft={<Plus size={18} />}
@@ -259,6 +270,17 @@ export const SipsPage: React.FC = () => {
           isLoading={isSubmitting}
         />
       </Dialog>
+
+      {/* Import Statement Dialog */}
+      <StatementUploadDialog
+        isOpen={isImportDialogOpen}
+        onClose={(success) => {
+          setIsImportDialogOpen(false);
+          if (success) {
+            loadSips();
+          }
+        }}
+      />
     </div>
   );
 };

@@ -8,6 +8,8 @@ export interface Investment {
   currentPrice: number;
   purchaseDate: string; // ISO date string
   lastUpdated?: string; // ISO date string
+  isin?: string; // From statement import
+  importSource?: string; // 'CAS', 'CAMS', 'ZERODHA_EXCEL', or null for manual
   
   // These are computed server-side but we'll include them for convenience
   currentValue?: number;
