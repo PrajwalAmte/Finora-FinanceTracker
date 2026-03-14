@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, Download, Search, Upload } from 'lucide-react';
+import { Plus, TrendingUp, Download, Search, Upload, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,6 +24,7 @@ export const InvestmentsPage: React.FC = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -100,6 +101,19 @@ export const InvestmentsPage: React.FC = () => {
     setInvestments(prev => prev.filter(investment => investment.id !== id));
   };
 
+  const handleRefreshPrices = async () => {
+    try {
+      setIsRefreshing(true);
+      await investmentApi.refreshPrices();
+      toast.success('NAVs refreshed — reloading data…');
+      await loadInvestments();
+    } catch {
+      toast.error('Failed to refresh prices');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Handle export to Excel
   const handleExportExcel = () => {
     generateInvestmentReport(
@@ -129,6 +143,14 @@ export const InvestmentsPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />}
+            onClick={handleRefreshPrices}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? 'Refreshing…' : 'Refresh NAVs'}
+          </Button>
           <Button
             variant="outline"
             iconLeft={<Download size={18} />}

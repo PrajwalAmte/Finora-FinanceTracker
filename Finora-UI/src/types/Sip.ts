@@ -3,19 +3,22 @@ export interface Sip {
   name: string;
   schemeCode: string;
   monthlyAmount: number;
-  startDate: string; // ISO date string — day of month encodes the monthly payment day
+  /** Next installment date (stored as startDate in DB). Advances by +1 month after each payment. */
+  startDate: string;
   durationMonths: number;
-  currentNav: number;
-  totalUnits: number;
-  lastUpdated?: string; // ISO date string
-  lastInvestmentDate?: string; // ISO date string
-  isin?: string; // From statement import
-  importSource?: string; // 'CAS', 'CAMS', 'ZERODHA_EXCEL', or null for manual
+  currentNav?: number;
+  totalUnits?: number;
+  lastUpdated?: string;
+  lastInvestmentDate?: string;
+  isin?: string;
+  importSource?: string;
 
-  // Computed properties
+  // Stored on the server — actual money paid in so far
+  totalInvested?: number;
+
+  // Server-computed
   currentValue?: number;
   completedInstallments?: number;
-  totalInvested?: number;
   profitLoss?: number;
 }
 

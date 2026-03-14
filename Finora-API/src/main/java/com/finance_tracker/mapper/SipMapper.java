@@ -20,6 +20,7 @@ public class SipMapper {
         sip.setDurationMonths(dto.getDurationMonths() != null ? dto.getDurationMonths() : 120);
         if (dto.getCurrentNav() != null) sip.setCurrentNav(dto.getCurrentNav());
         if (dto.getTotalUnits() != null) sip.setTotalUnits(dto.getTotalUnits());
+        if (dto.getTotalInvested() != null) sip.setTotalInvested(dto.getTotalInvested());
         sip.setIsin(dto.getIsin());
         sip.setImportSource(dto.getImportSource());
         return sip;

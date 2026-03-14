@@ -6,12 +6,14 @@ import com.finance_tracker.dto.InvestmentSummaryDTO;
 import com.finance_tracker.mapper.InvestmentMapper;
 import com.finance_tracker.model.Investment;
 import com.finance_tracker.service.InvestmentService;
+import com.finance_tracker.service.SipService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/investments")
@@ -19,6 +21,7 @@ import java.util.List;
 public class InvestmentController {
     private final InvestmentService investmentService;
     private final InvestmentMapper investmentMapper;
+    private final SipService sipService;
 
     @GetMapping
     public List<InvestmentResponseDTO> getAllInvestments() {
@@ -64,5 +67,16 @@ public class InvestmentController {
                 .totalValue(totalValue)
                 .totalProfitLoss(totalProfitLoss)
                 .build();
+    }
+
+    /**
+     * Manually triggers a live price/NAV refresh for all investments and SIPs.
+     * Useful after import or when the daily scheduler hasn't run yet.
+     */
+    @PostMapping("/refresh-prices")
+    public ResponseEntity<Map<String, String>> refreshPrices() {
+        investmentService.updateCurrentPrices();
+        sipService.updateCurrentNavs();
+        return ResponseEntity.ok(Map.of("status", "Price refresh triggered successfully"));
     }
 }

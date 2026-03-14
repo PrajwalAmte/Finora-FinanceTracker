@@ -121,11 +121,26 @@ public class SipService {
 
             for (Sip sip : sips) {
                 try {
-                    if (sip.getSchemeCode() == null || sip.getSchemeCode().isBlank()) {
-                        logger.debug("Skipping NAV update for SIP '{}' — no scheme code", sip.getName());
-                        continue;
+                    String schemeCode = sip.getSchemeCode();
+
+                    // If scheme code is missing, try to resolve it from the SIP's stored ISIN.
+                    if (schemeCode == null || schemeCode.isBlank()) {
+                        if (sip.getIsin() != null && !sip.getIsin().isBlank()) {
+                            schemeCode = amfiNavService.lookupSchemeCodeByIsin(sip.getIsin()).orElse(null);
+                            if (schemeCode != null) {
+                                // Persist the resolved scheme code so future runs skip this step.
+                                sip.setSchemeCode(schemeCode);
+                                logger.info("Resolved scheme code {} for SIP '{}' via ISIN {}",
+                                        schemeCode, sip.getName(), sip.getIsin());
+                            }
+                        }
+                        if (schemeCode == null) {
+                            logger.debug("Skipping NAV update for SIP '{}' — no scheme code or ISIN", sip.getName());
+                            continue;
+                        }
                     }
-                    BigDecimal nav = navData.get(sip.getSchemeCode());
+
+                    BigDecimal nav = navData.get(schemeCode);
                     if (nav != null && nav.compareTo(BigDecimal.ZERO) > 0) {
                         sip.setCurrentNav(nav);
                         sip.setLastUpdated(LocalDate.now());
@@ -210,6 +225,7 @@ public class SipService {
                 .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Sip", id));
         validateOwnership(sip.getUserId(), userId);
 
+        // Add units for this installment (if NAV is available).
         BigDecimal currentNav = sip.getCurrentNav();
         if (currentNav != null && currentNav.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal unitsAdded = sip.getMonthlyAmount()
@@ -217,9 +233,19 @@ public class SipService {
             BigDecimal existing = sip.getTotalUnits() != null ? sip.getTotalUnits() : BigDecimal.ZERO;
             sip.setTotalUnits(existing.add(unitsAdded));
         }
+
+        // Accumulate total invested (actual money paid, not derived from elapsed months).
+        BigDecimal invested = sip.getTotalInvested() != null ? sip.getTotalInvested() : BigDecimal.ZERO;
+        sip.setTotalInvested(invested.add(sip.getMonthlyAmount()));
+
         LocalDate today = LocalDate.now();
         sip.setLastInvestmentDate(today);
         sip.setLastUpdated(today);
+
+        // Advance the next installment date by one month.
+        if (sip.getStartDate() != null) {
+            sip.setStartDate(sip.getStartDate().plusMonths(1));
+        }
 
         Sip saved = sipRepository.save(sip);
         ledgerService.recordEvent("SIP", String.valueOf(id), "PAY", null, saved, String.valueOf(userId));

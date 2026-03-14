@@ -73,4 +73,14 @@ export const sipApi = {
       throw error;
     }
   },
+
+  /** Triggers an immediate NAV refresh for all investments and SIPs. */
+  refreshNavs: async (): Promise<void> => {
+    try {
+      await apiClient.post('/investments/refresh-prices');
+    } catch (error) {
+      console.error('Failed to refresh NAVs:', error);
+      throw error;
+    }
+  },
 };

@@ -18,37 +18,45 @@ export const SipForm: React.FC<SipFormProps> = ({
   initialData,
   mode = 'create',
 }) => {
+  // Default next installment date = one month from today
+  const defaultNextInstallment = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     schemeCode: '',
     monthlyAmount: '',
-    startDate: new Date().toISOString().split('T')[0],
-    durationMonths: '',
+    startDate: defaultNextInstallment(),
     currentNav: '',
     totalUnits: '',
+    totalInvested: '',
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name,
-        schemeCode: initialData.schemeCode,
+        schemeCode: initialData.schemeCode ?? '',
         monthlyAmount: initialData.monthlyAmount.toString(),
-        startDate: new Date(initialData.startDate).toISOString().split('T')[0],
-        durationMonths: initialData.durationMonths.toString(),
-        currentNav: initialData.currentNav.toString(),
-        totalUnits: initialData.totalUnits.toString(),
+        startDate: initialData.startDate
+          ? new Date(initialData.startDate).toISOString().split('T')[0]
+          : defaultNextInstallment(),
+        currentNav: initialData.currentNav?.toString() ?? '',
+        totalUnits: initialData.totalUnits?.toString() ?? '',
+        totalInvested: initialData.totalInvested?.toString() ?? '',
       });
     } else {
-      // Reset form to defaults when no initial data (for create mode)
       setFormData({
         name: '',
         schemeCode: '',
         monthlyAmount: '',
-        startDate: new Date().toISOString().split('T')[0],
-        durationMonths: '',
+        startDate: defaultNextInstallment(),
         currentNav: '',
         totalUnits: '',
+        totalInvested: '',
       });
     }
   }, [initialData]);
@@ -58,9 +66,10 @@ export const SipForm: React.FC<SipFormProps> = ({
     onSubmit({
       ...formData,
       monthlyAmount: parseFloat(formData.monthlyAmount),
-      durationMonths: parseInt(formData.durationMonths),
-      currentNav: parseFloat(formData.currentNav),
-      totalUnits: parseFloat(formData.totalUnits),
+      durationMonths: 120,          // always default; not shown in form
+      currentNav: formData.currentNav ? parseFloat(formData.currentNav) : undefined,
+      totalUnits: formData.totalUnits ? parseFloat(formData.totalUnits) : undefined,
+      totalInvested: formData.totalInvested ? parseFloat(formData.totalInvested) : undefined,
     });
   };
 
@@ -84,46 +93,46 @@ export const SipForm: React.FC<SipFormProps> = ({
       
       <Input
         type="number"
-        label="Monthly Amount"
+        label="Monthly Amount (₹)"
         value={formData.monthlyAmount}
         onChange={(e) => setFormData({ ...formData, monthlyAmount: e.target.value })}
         required
         fullWidth
       />
-      
+
       <Input
         type="date"
-        label="Start Date"
+        label="Next Installment Date"
         value={formData.startDate}
         onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
         required
         fullWidth
       />
-      
+
       <Input
         type="number"
-        label="Duration (Months)"
-        value={formData.durationMonths}
-        onChange={(e) => setFormData({ ...formData, durationMonths: e.target.value })}
-        required
+        label="Total Invested So Far (₹)  — optional, for P&L tracking"
+        placeholder="Leave blank to start fresh"
+        value={formData.totalInvested}
+        onChange={(e) => setFormData({ ...formData, totalInvested: e.target.value })}
         fullWidth
       />
-      
+
       <Input
         type="number"
-        label="Current NAV"
+        label="Current NAV — optional"
+        placeholder="Auto-fetched from AMFI"
         value={formData.currentNav}
         onChange={(e) => setFormData({ ...formData, currentNav: e.target.value })}
-        required
         fullWidth
       />
-      
+
       <Input
         type="number"
-        label="Total Units"
+        label="Total Units — optional"
+        placeholder="Auto-fetched from AMFI"
         value={formData.totalUnits}
         onChange={(e) => setFormData({ ...formData, totalUnits: e.target.value })}
-        required
         fullWidth
       />
       

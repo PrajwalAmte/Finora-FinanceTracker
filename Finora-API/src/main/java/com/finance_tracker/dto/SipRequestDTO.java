@@ -31,6 +31,10 @@ public class SipRequestDTO {
     private BigDecimal currentNav;
     private BigDecimal totalUnits;
 
+    // Actual total invested so far; replaces monthlyAmount × elapsed-months calculation.
+    // Optional — leave null to start fresh (0). Seed from statement data when available.
+    private BigDecimal totalInvested;
+
     // For SIPs created from MF import
     private String isin;
     private String importSource;

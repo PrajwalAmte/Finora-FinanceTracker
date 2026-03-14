@@ -38,6 +38,12 @@ public class Sip {
     private LocalDate lastUpdated;
     private LocalDate lastInvestmentDate;
 
+    // Stores the actual total amount invested so far.
+    // Incremented by monthlyAmount each time a payment is recorded.
+    // Seeded from statement import (units × avgCost) when available.
+    @Column(name = "total_invested", precision = 19, scale = 2)
+    private BigDecimal totalInvested;
+
     @Column(name = "user_id")
     private Long userId;
 
@@ -54,23 +60,14 @@ public class Sip {
         return totalUnits.multiply(currentNav);
     }
 
-    public Integer getCompletedInstallments() {
-        if (startDate == null) {
-            return 0;
-        }
-
-        LocalDate endDate = lastInvestmentDate != null ? lastInvestmentDate : LocalDate.now();
-
-        if (startDate.isAfter(endDate)) {
-            return 0;
-        }
-
-        return (int) (startDate.until(endDate).toTotalMonths() + 1);
+    public BigDecimal getTotalInvested() {
+        return totalInvested != null ? totalInvested : BigDecimal.ZERO;
     }
 
-    public BigDecimal getTotalInvested() {
-        if (monthlyAmount == null) return BigDecimal.ZERO;
-        return monthlyAmount.multiply(new BigDecimal(getCompletedInstallments()));
+    /** Approximate count derived from stored totalInvested. */
+    public Integer getCompletedInstallments() {
+        if (monthlyAmount == null || monthlyAmount.compareTo(BigDecimal.ZERO) == 0) return 0;
+        return getTotalInvested().divide(monthlyAmount, 0, java.math.RoundingMode.HALF_UP).intValue();
     }
 
     public BigDecimal getProfitLoss() {

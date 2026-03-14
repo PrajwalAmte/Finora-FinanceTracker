@@ -151,10 +151,12 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
         });
         if (mfsForSip.length > 0) {
           setImportedMfs(mfsForSip);
-          const today = new Date().toISOString().split('T')[0];
+          const nextMonth = new Date();
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          const nextMonthStr = nextMonth.toISOString().split('T')[0];
           const initialSetups: Record<string, SipSetup> = {};
           mfsForSip.forEach(m => {
-            initialSetups[m.isin ?? m.schemeName] = { enabled: false, amount: '', startDate: today };
+            initialSetups[m.isin ?? m.schemeName] = { enabled: false, amount: '', startDate: nextMonthStr };
           });
           setSipSetups(initialSetups);
           setStep(3); // show result first, then user clicks "Set up SIPs →"
@@ -596,7 +598,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                           fullWidth
                         />
                         <Input
-                          label="SIP Start Date"
+                          label="Next Installment Date"
                           type="date"
                           value={setup.startDate}
                           onChange={e =>

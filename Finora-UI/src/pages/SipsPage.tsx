@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, LineChart, Download, Search, Upload } from 'lucide-react';
+import { Plus, LineChart, Download, Search, Upload, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,6 +24,7 @@ export const SipsPage: React.FC = () => {
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payingId, setPayingId] = useState<number | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   useEffect(() => {
     loadSips();
@@ -49,7 +50,7 @@ export const SipsPage: React.FC = () => {
   // Filter SIPs based on search term
   const filteredSips = sips.filter(sip => 
     sip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sip.schemeCode.toLowerCase().includes(searchTerm.toLowerCase())
+    (sip.schemeCode ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Calculate return percentage
@@ -89,6 +90,19 @@ export const SipsPage: React.FC = () => {
     setSips(prev => prev.filter(sip => sip.id !== id));
   };
 
+  const handleRefreshNavs = async () => {
+    try {
+      setIsRefreshing(true);
+      await sipApi.refreshNavs();
+      toast.success('NAVs refreshed — reloading data…');
+      await loadSips();
+    } catch {
+      toast.error('Failed to refresh NAVs');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Handle export to Excel
   const handleExportExcel = () => {
     generateSipReport(
@@ -100,18 +114,18 @@ export const SipsPage: React.FC = () => {
     );
   };
 
-  // Returns true if today is within ±3 days of this SIP's payment day AND not yet paid this month.
-  // The payment day is derived from startDate's day-of-month.
+  // Returns true when the next installment date is today or within the next 3 days
+  // (or is already overdue). startDate is stored as the UPCOMING installment date;
+  // recordPayment() advances it by +1 month after each payment.
   const isPaymentDue = (sip: Sip): boolean => {
     if (!sip.startDate) return false;
-    const payDay = new Date(sip.startDate).getDate();
+    const nextDate = new Date(sip.startDate);
     const today = new Date();
-    const dueThisMonth = new Date(today.getFullYear(), today.getMonth(), payDay);
-    const diffDays = Math.abs((today.getTime() - dueThisMonth.getTime()) / 86_400_000);
-    const paidThisMonth =
-      sip.lastInvestmentDate &&
-      new Date(sip.lastInvestmentDate) >= new Date(today.getFullYear(), today.getMonth(), 1);
-    return diffDays <= 3 && !paidThisMonth;
+    today.setHours(0, 0, 0, 0);
+    nextDate.setHours(0, 0, 0, 0);
+    const diffDays = (nextDate.getTime() - today.getTime()) / 86_400_000;
+    // Due if overdue (past) or coming up within 3 days
+    return diffDays <= 3;
   };
 
   const handleMarkPaid = async (sip: Sip) => {
@@ -123,7 +137,7 @@ export const SipsPage: React.FC = () => {
       // Refresh summary
       const summaryData = await sipApi.getSummary();
       setSummary(summaryData);
-      toast.success(`✓ Payment recorded for ${sip.name}`);
+      toast.success(`Payment recorded for ${sip.name}`);
     } catch (error) {
       console.error('Failed to record payment:', error);
       toast.error('Failed to record payment');
@@ -146,6 +160,14 @@ export const SipsPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />}
+            onClick={handleRefreshNavs}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? 'Refreshing…' : 'Refresh NAVs'}
+          </Button>
           <Button
             variant="outline"
             iconLeft={<Download size={18} />}
@@ -242,10 +264,10 @@ export const SipsPage: React.FC = () => {
                             </div>
                             <div className="ml-3">
                               <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
-                              <div className="text-xs text-neutral-500 dark:text-neutral-400">Started {formatDate(sip.startDate)}</div>
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400">Next: {formatDate(sip.startDate)}</div>
                               {due && (
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">💰 Payment due this month</span>
+                                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Payment due this month</span>
                                   <button
                                     onClick={() => handleMarkPaid(sip)}
                                     disabled={payingId === sip.id}
@@ -265,7 +287,7 @@ export const SipsPage: React.FC = () => {
                           {formatCurrency(sip.currentNav)}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {sip.totalUnits.toFixed(2)}
+                          {sip.totalUnits != null ? sip.totalUnits.toFixed(2) : '—'}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
                           {formatCurrency(sip.totalInvested || 0)}

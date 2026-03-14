@@ -54,6 +54,14 @@ public class InvestmentService {
         if (normalized.contains(".")) {
             return normalized;
         }
+        // AMFI scheme codes are purely numeric (e.g. "119598") — no exchange suffix needed.
+        if (normalized.matches("\\d+")) {
+            return normalized;
+        }
+        // ISIN format: 12-char string starting with "IN" — no exchange suffix.
+        if (normalized.matches("IN[A-Z]{2}[A-Z0-9]{9}\\d")) {
+            return normalized;
+        }
         return normalized + ".NS";
     }
 
@@ -132,13 +140,26 @@ public class InvestmentService {
                     // an ISIN (starts with IN), resolve the scheme code via ISIN lookup.
                     currentPrice = amfiNavService.getNavBySchemeCode(investment.getSymbol()).orElse(null);
                     if (currentPrice == null) {
+                        // Strip exchange suffix added by normalizeSymbol() for pre-fix rows
                         String sym = investment.getSymbol().replaceAll("\\.NS$|\\.BO$", "");
-                        String resolved = amfiNavService.lookupSchemeCodeByIsin(sym).orElse(null);
-                        if (resolved != null) {
-                            currentPrice = amfiNavService.getNavBySchemeCode(resolved).orElse(null);
-                            if (currentPrice != null) {
-                                // Correct the symbol so future refreshes use the scheme code directly
-                                investment.setSymbol(resolved);
+                        // Step 1: retry stripped string as a scheme code (handles "119598.NS" → "119598")
+                        currentPrice = amfiNavService.getNavBySchemeCode(sym).orElse(null);
+                        if (currentPrice != null) {
+                            investment.setSymbol(sym);  // fix the stored symbol for future refreshes
+                        } else {
+                            // Step 2: try ISIN lookup from the stripped symbol
+                            String resolved = amfiNavService.lookupSchemeCodeByIsin(sym).orElse(null);
+                            // Step 3: also try the investment's own isin field as a last resort
+                            if (resolved == null && investment.getIsin() != null) {
+                                resolved = amfiNavService.lookupSchemeCodeByIsin(
+                                        investment.getIsin().replaceAll("\\.NS$|\\.BO$", "")).orElse(null);
+                            }
+                            if (resolved != null) {
+                                currentPrice = amfiNavService.getNavBySchemeCode(resolved).orElse(null);
+                                if (currentPrice != null) {
+                                    // Correct the symbol so future refreshes skip the ISIN resolution step
+                                    investment.setSymbol(resolved);
+                                }
                             }
                         }
                     }

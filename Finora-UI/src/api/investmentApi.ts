@@ -61,5 +61,14 @@ export const investmentApi = {
       console.error('Failed to fetch investment summary:', error);
       throw error;
     }
+  },
+
+  refreshPrices: async (): Promise<void> => {
+    try {
+      await apiClient.post(`${BASE_PATH}/refresh-prices`);
+    } catch (error) {
+      console.error('Failed to trigger price refresh:', error);
+      throw error;
+    }
   }
 };
