@@ -194,10 +194,10 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <div className="text-gray-600">
+                <div className="text-gray-600 dark:text-gray-300">
                   {file ? (
                     <div>
-                      <p className="font-medium text-gray-900">{file.name}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{file.name}</p>
                       <p className="text-xs mt-1">Click to change</p>
                     </div>
                   ) : (
@@ -225,7 +225,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Enter password"
                 />
-                <p className="text-xs text-gray-600">{passwordHints[statementType]}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{passwordHints[statementType]}</p>
               </div>
             )}
 
@@ -254,8 +254,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                 onClick={() => setSelectedTab('equities')}
                 className={`px-4 py-2 border-b-2 text-sm font-medium transition ${
                   selectedTab === 'equities'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
                 }`}
               >
                 Equities & ETFs ({preview.holdings.length})
@@ -264,8 +264,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                 onClick={() => setSelectedTab('mfs')}
                 className={`px-4 py-2 border-b-2 text-sm font-medium transition ${
                   selectedTab === 'mfs'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
                 }`}
               >
                 Mutual Funds ({preview.mfHoldings.length})
@@ -278,7 +278,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
+                      <tr className="border-b dark:border-gray-700">
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
@@ -297,7 +297,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       {preview.holdings.map(e => {
                         const eKey = e.isin ?? e.symbol;
                         return (
-                        <tr key={eKey} className="border-b hover:bg-gray-50">
+                        <tr key={eKey} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
                           <td className="p-2">
                             <input
                               type="checkbox"
@@ -338,7 +338,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
+                      <tr className="border-b dark:border-gray-700">
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
@@ -357,7 +357,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       {preview.mfHoldings.map(m => {
                         const mKey = m.isin ?? m.schemeName;
                         return (
-                        <tr key={mKey} className="border-b hover:bg-gray-50">
+                        <tr key={mKey} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
                           <td className="p-2">
                             <input
                               type="checkbox"
@@ -394,11 +394,11 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
 
             {/* Warnings */}
             {preview.warnings.length > 0 && (
-              <details className="p-3 bg-amber-50 border border-amber-200 rounded">
-                <summary className="font-medium text-amber-900 cursor-pointer">
+              <details className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
+                <summary className="font-medium text-amber-900 dark:text-amber-300 cursor-pointer">
                   {preview.warnings.length} warnings
                 </summary>
-                <ul className="mt-2 space-y-1 text-sm text-amber-800">
+                <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-400">
                   {preview.warnings.map((w: string, i: number) => (
                     <li key={i}>• {w}</li>
                   ))}
@@ -432,9 +432,9 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
             </div>
 
             {Object.keys(result.skippedReasons).length > 0 && (
-              <details className="p-3 bg-gray-50 border rounded">
+              <details className="p-3 bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded">
                 <summary className="font-medium cursor-pointer">Skipped Items</summary>
-                <ul className="mt-2 space-y-1 text-sm text-gray-700">
+                <ul className="mt-2 space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   {Object.entries(result.skippedReasons).map(([id, reason]: [string, unknown]) => (
                     <li key={id}>
                       <span className="font-mono text-xs">{id}</span>: {String(reason)}

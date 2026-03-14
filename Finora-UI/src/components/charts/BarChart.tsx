@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { useTheme } from '../../utils/theme-context';
 
 interface DataItem {
   name: string;
@@ -39,6 +40,15 @@ export const BarChart: React.FC<BarChartProps> = ({
   className,
   stacked = false,
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const tooltipBg     = isDark ? '#1f2937' : '#ffffff';
+  const tooltipBorder = isDark ? '#374151' : '#e5e7eb';
+  const tooltipText   = isDark ? '#f9fafb' : '#111827';
+  const tickColor     = isDark ? '#9ca3af' : '#6b7280';
+  const gridColor     = isDark ? '#374151' : '#e5e7eb';
+
   // If no data
   if (!data || data.length === 0) {
     return (
@@ -52,10 +62,17 @@ export const BarChart: React.FC<BarChartProps> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-neutral-800 p-3 border border-neutral-200 dark:border-neutral-700 rounded shadow">
-          <p className="font-medium truncate max-w-[200px]">{label}</p>
+        <div style={{
+          background: tooltipBg,
+          border: `1px solid ${tooltipBorder}`,
+          borderRadius: 6,
+          padding: '10px 14px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          maxWidth: 240,
+        }}>
+          <p style={{ margin: 0, fontWeight: 600, color: tooltipText, fontSize: 14 }}>{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={`tooltip-${index}`} style={{ color: entry.color }} className="text-sm">
+            <p key={`tooltip-${index}`} style={{ margin: '4px 0 0', color: entry.color, fontSize: 13 }}>
               {entry.name}: ₹{entry.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           ))}
@@ -73,25 +90,25 @@ export const BarChart: React.FC<BarChartProps> = ({
           data={data} 
           margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis 
             dataKey={xAxisKey} 
-            tick={{ fill: '#6B7280' }} 
-            tickLine={{ stroke: '#6B7280' }} 
-            axisLine={{ stroke: '#9CA3AF' }}
+            tick={{ fill: tickColor }} 
+            tickLine={{ stroke: tickColor }} 
+            axisLine={{ stroke: tickColor }}
             height={60}
             interval={0}
             angle={-45}
             textAnchor="end"
           />
           <YAxis 
-            tick={{ fill: '#6B7280' }} 
-            tickLine={{ stroke: '#6B7280' }} 
-            axisLine={{ stroke: '#9CA3AF' }}
+            tick={{ fill: tickColor }} 
+            tickLine={{ stroke: tickColor }} 
+            axisLine={{ stroke: tickColor }}
             tickFormatter={(value) => `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
             width={80}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} wrapperStyle={{ outline: 'none' }} />
           <Legend wrapperStyle={{ paddingTop: '20px' }} />
           {bars.map((bar, index) => (
             <Bar

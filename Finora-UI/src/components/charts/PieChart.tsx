@@ -7,6 +7,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { useTheme } from '../../utils/theme-context';
 
 interface DataItem {
   name: string;
@@ -40,6 +41,15 @@ export const PieChart: React.FC<PieChartProps> = ({
   className,
 }) => {
 
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const tooltipBg    = isDark ? '#1f2937' : '#ffffff';
+  const tooltipBorder = isDark ? '#374151' : '#e5e7eb';
+  const tooltipText  = isDark ? '#f9fafb' : '#111827';
+  const tooltipSub   = isDark ? '#d1d5db' : '#374151';
+  const tooltipMuted = isDark ? '#9ca3af' : '#6b7280';
+
   const filteredData = data.filter(item => item.value > 0);
 
   if (filteredData.length === 0) {
@@ -52,15 +62,25 @@ export const PieChart: React.FC<PieChartProps> = ({
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const item = payload[0].payload;
+      const total = filteredData.reduce((sum, d) => sum + d.value, 0);
       return (
-        <div className="bg-white dark:bg-neutral-800 p-3 border border-neutral-200 dark:border-neutral-700 rounded shadow">
-          <p className="font-medium truncate max-w-[200px]">{data.name}</p>
-          <p className="text-sm text-neutral-700 dark:text-neutral-300">
-            ₹{data.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div style={{
+          background: tooltipBg,
+          border: `1px solid ${tooltipBorder}`,
+          borderRadius: 6,
+          padding: '10px 14px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          maxWidth: 220,
+        }}>
+          <p style={{ margin: 0, fontWeight: 600, color: tooltipText, fontSize: 14 }}>
+            {item.name}
           </p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            {((data.value / filteredData.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%
+          <p style={{ margin: '4px 0 0', color: tooltipSub, fontSize: 13 }}>
+            ₹{item.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p style={{ margin: '2px 0 0', color: tooltipMuted, fontSize: 12 }}>
+            {((item.value / total) * 100).toFixed(1)}%
           </p>
         </div>
       );
@@ -127,7 +147,7 @@ export const PieChart: React.FC<PieChartProps> = ({
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} wrapperStyle={{ outline: 'none' }} />
           <Legend content={renderLegend} />
         </RechartsPieChart>
       </ResponsiveContainer>
