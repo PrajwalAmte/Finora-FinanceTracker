@@ -12,13 +12,22 @@ import statementApi, {
 } from '../api/statementApi';
 import { toast } from '../utils/notifications';
 
-type StatementType = 'CAS' | 'CAMS' | 'ZERODHA_EXCEL';
+type StatementType = 'CAS' | 'CAMS' | 'HOLDINGS_FILE';
 
 const passwordHints: Record<StatementType, string> = {
   CAS: 'PAN (lowercase) + DOB as DDMMYYYY — e.g., abcde1234f01011990',
   CAMS: 'Email registered with CAMS',
-  ZERODHA_EXCEL: 'No password required',
+  HOLDINGS_FILE: 'No password required',
 };
+
+/** Determines backend statementType from UI type + file extension. */
+function getBackendType(type: StatementType, fileName: string): string {
+  if (type === 'HOLDINGS_FILE') {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    return ext === 'csv' ? 'CSV' : 'EXCEL';
+  }
+  return type;
+}
 
 interface StatementUploadDialogProps {
   isOpen: boolean;
@@ -41,10 +50,16 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     const f = e.target.files?.[0];
     if (f) {
       const ext = f.name.split('.').pop()?.toLowerCase();
-      const expectedExt = statementType === 'ZERODHA_EXCEL' ? 'xlsx' : 'pdf';
-      if (ext !== expectedExt) {
-        toast.error(`Expected ${expectedExt} file for ${statementType}`);
-        return;
+      if (statementType === 'HOLDINGS_FILE') {
+        if (ext !== 'xlsx' && ext !== 'xls' && ext !== 'csv') {
+          toast.error('Expected .xlsx, .xls, or .csv Holdings export file');
+          return;
+        }
+      } else {
+        if (ext !== 'pdf') {
+          toast.error(`Expected .pdf file for ${statementType}`);
+          return;
+        }
       }
       setFile(f);
     }
@@ -55,14 +70,15 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       toast.error('Please select a file');
       return;
     }
-    if (statementType !== 'ZERODHA_EXCEL' && !password) {
+    if (statementType !== 'HOLDINGS_FILE' && !password) {
       toast.error('Password required');
       return;
     }
 
     setLoading(true);
     try {
-      const data = await statementApi.preview(file, statementType, password);
+      const backendType = getBackendType(statementType, file.name);
+      const data = await statementApi.preview(file, backendType, password);
       setPreview(data);
       setStep(2);
       if (data.warnings.length > 0) {
@@ -147,7 +163,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
             <div className="space-y-3">
               <label className="text-sm font-semibold">Statement Type</label>
               <div className="grid grid-cols-3 gap-3">
-                {(['CAS', 'CAMS', 'ZERODHA_EXCEL'] as const).map(type => (
+                {(['CAS', 'CAMS', 'HOLDINGS_FILE'] as const).map(type => (
                   <button
                     key={type}
                     onClick={() => {
@@ -157,11 +173,11 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     }}
                     className={`p-3 rounded border text-sm font-medium transition ${
                       statementType === type
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-400'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    {type === 'ZERODHA_EXCEL' ? 'Zerodha Excel' : type}
+                    {type === 'HOLDINGS_FILE' ? 'Holdings File' : type}
                   </button>
                 ))}
               </div>
@@ -173,7 +189,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               <label className="block p-6 border-2 border-dashed rounded-lg text-center cursor-pointer hover:border-blue-500 transition">
                 <input
                   type="file"
-                  accept={statementType === 'ZERODHA_EXCEL' ? '.xlsx' : '.pdf'}
+                  accept={statementType === 'HOLDINGS_FILE' ? '.xlsx,.xls,.csv' : '.pdf'}
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -187,7 +203,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     <div>
                       <p className="font-medium">Drop file or click to browse</p>
                       <p className="text-xs mt-1">
-                        {statementType === 'ZERODHA_EXCEL' ? '.xlsx' : '.pdf'} files only
+                        {statementType === 'HOLDINGS_FILE' ? '.xlsx, .xls, .csv' : '.pdf'} files only
                       </p>
                     </div>
                   )}
@@ -196,7 +212,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
             </div>
 
             {/* Password Field */}
-            {statementType !== 'ZERODHA_EXCEL' && (
+            {statementType !== 'HOLDINGS_FILE' && (
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-semibold">
                   Password

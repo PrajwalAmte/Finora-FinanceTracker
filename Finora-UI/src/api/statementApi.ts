@@ -51,7 +51,7 @@ export interface StatementImportResult {
 const statementApi = {
   preview: async (
     file: File,
-    statementType: 'CAS' | 'CAMS' | 'ZERODHA_EXCEL',
+    statementType: string,
     password?: string
   ): Promise<StatementPreviewResponse> => {
     const formData = new FormData();

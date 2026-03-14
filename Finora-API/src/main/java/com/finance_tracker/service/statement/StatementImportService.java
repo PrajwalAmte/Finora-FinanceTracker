@@ -255,10 +255,14 @@ public class StatementImportService {
                  "HDFC_EXCEL", "ICICI_EXCEL", "ANGEL_EXCEL",
                  "5PAISA_EXCEL", "KOTAK_EXCEL", "SHAREKHAN_EXCEL",
                  "EXCEL" -> excelParser.parse(bytes, password, statementType.trim().toUpperCase());
+            case "CSV", "HOLDINGS_CSV", "ZERODHA_CSV", "GROWW_CSV",
+                 "UPSTOX_CSV", "HOLDINGS_FILE_CSV"
+                    -> excelParser.parse(bytes, password, statementType.trim().toUpperCase());
             default -> throw new StatementParseException(
                     "Unknown statement type '" + statementType + "'. "
                             + "Supported: CAS, CAMS, ZERODHA_EXCEL, GROWW_EXCEL, "
-                            + "UPSTOX_EXCEL, HDFC_EXCEL, ICICI_EXCEL, ANGEL_EXCEL, EXCEL.");
+                            + "UPSTOX_EXCEL, HDFC_EXCEL, ICICI_EXCEL, ANGEL_EXCEL, EXCEL, "
+                            + "CSV, HOLDINGS_CSV, ZERODHA_CSV, GROWW_CSV.");
         };
     }
 

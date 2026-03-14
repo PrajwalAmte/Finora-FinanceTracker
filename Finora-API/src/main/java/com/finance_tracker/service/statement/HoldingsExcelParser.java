@@ -15,9 +15,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,7 +28,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Generic broker Holdings Excel parser (.xlsx / .xls).
+ * Generic broker holdings parser — supports .xlsx/.xls (Excel) and .csv.
  * Detects column positions by header name (case-insensitive substring match), so it survives
  * column reorders across broker export format updates.
  * Supported brokers: Zerodha, Groww, Upstox, HDFC Securities, ICICI Direct, Angel One, 5Paisa.
@@ -81,7 +84,10 @@ public class HoldingsExcelParser implements StatementParser {
     @Override
     public StatementPreviewDTO parse(byte[] fileBytes, String password, String statementType)
             throws StatementParseException {
-
+        // Route CSV files separately — no POI needed
+        if (statementType.endsWith("_CSV") || statementType.equals("CSV")) {
+            return parseFromCsv(fileBytes, statementType);
+        }
         Workbook workbook = openWorkbook(fileBytes);
         Sheet sheet = workbook.getSheetAt(0);
 
@@ -201,6 +207,175 @@ public class HoldingsExcelParser implements StatementParser {
                             + "Supported formats: Zerodha, Groww, Upstox, HDFC Securities, "
                             + "ICICI Direct, Angel One, 5Paisa.", e);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // CSV parsing (Zerodha and other brokers that export holdings as CSV)
+    // -------------------------------------------------------------------------
+
+    private StatementPreviewDTO parseFromCsv(byte[] fileBytes, String statementType)
+            throws StatementParseException {
+        List<ParsedHolding>   holdings   = new ArrayList<>();
+        List<ParsedMFHolding> mfHoldings = new ArrayList<>();
+        List<String>          warnings   = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new ByteArrayInputStream(fileBytes), StandardCharsets.UTF_8))) {
+
+            // Scan header row
+            int isinIdx = -1, qtyIdx = -1, avgCostIdx = -1,
+                nameIdx = -1, symbolIdx = -1, ltpIdx = -1, typeIdx = -1;
+            String[] headers = null;
+            String line;
+            int scanned = 0;
+
+            while ((line = reader.readLine()) != null && scanned <= MAX_HEADER_SCAN_ROWS) {
+                if (line.isBlank()) { scanned++; continue; }
+                String[] cols = parseCsvLine(line);
+                boolean hasIsin = false;
+                for (int i = 0; i < cols.length; i++) {
+                    String norm = cols[i].toLowerCase(java.util.Locale.ROOT).trim();
+                    if (matchAny(norm, ISIN_HEADERS)) { isinIdx = i; hasIsin = true; break; }
+                }
+                if (hasIsin) {
+                    headers = cols;
+                    for (int i = 0; i < cols.length; i++) {
+                        if (i == isinIdx) continue;
+                        String norm = cols[i].toLowerCase(java.util.Locale.ROOT).trim();
+                        if      (qtyIdx     < 0 && matchAny(norm, QTY_HEADERS))      qtyIdx     = i;
+                        else if (avgCostIdx < 0 && matchAny(norm, AVG_COST_HEADERS)) avgCostIdx = i;
+                        else if (nameIdx    < 0 && matchAny(norm, NAME_HEADERS))     nameIdx    = i;
+                        else if (symbolIdx  < 0 && matchAny(norm, SYMBOL_HEADERS))   symbolIdx  = i;
+                        else if (ltpIdx     < 0 && matchAny(norm, LTP_HEADERS))      ltpIdx     = i;
+                        else if (typeIdx    < 0 && matchAny(norm, TYPE_HEADERS))     typeIdx    = i;
+                    }
+                    break;
+                }
+                scanned++;
+            }
+
+            if (headers == null || isinIdx < 0 || qtyIdx < 0) {
+                List<String> missing = new ArrayList<>();
+                if (isinIdx < 0) missing.add("ISIN");
+                if (qtyIdx  < 0) missing.add("Quantity (Qty / Shares / Units)");
+                throw new StatementParseException(
+                        "Unrecognised CSV Holdings format — could not find required columns: "
+                                + String.join(", ", missing) + ". "
+                                + "Supported brokers: Zerodha, Groww, Upstox. "
+                                + "Ensure you are exporting the Holdings report, not a P&L or "
+                                + "transaction report.");
+            }
+
+            // Data rows
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) continue;
+                String[] cols = parseCsvLine(line);
+
+                String isin = safeGet(cols, isinIdx);
+                if (isin == null || isin.isBlank()) continue;
+                isin = isin.trim().toUpperCase();
+                if (!ISIN_PATTERN.matcher(isin).matches()) continue;
+
+                String name = safeGet(cols, nameIdx);
+                if (name == null || name.isBlank()) name = safeGet(cols, symbolIdx);
+                if (name == null || name.isBlank()) name = isin;
+
+                BigDecimal qty = parseCsvDecimal(safeGet(cols, qtyIdx));
+                if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+                    warnings.add("Skipped " + name + " (" + isin + ") — zero or missing quantity.");
+                    continue;
+                }
+
+                BigDecimal avgCost = parseCsvDecimal(safeGet(cols, avgCostIdx));
+                BigDecimal ltp     = parseCsvDecimal(safeGet(cols, ltpIdx));
+                String symbol      = safeGet(cols, symbolIdx);
+                String typeStr     = safeGet(cols, typeIdx);
+                InvestmentType type = resolveTypeFromStrings(typeStr, isin, name);
+
+                if (type == InvestmentType.MUTUAL_FUND) {
+                    mfHoldings.add(ParsedMFHolding.builder()
+                            .isin(isin).schemeName(name).schemeCode(null)
+                            .units(qty).avgCost(avgCost).nav(ltp).build());
+                } else {
+                    holdings.add(ParsedHolding.builder()
+                            .isin(isin).name(name).symbol(symbol)
+                            .quantity(qty).avgCost(avgCost)
+                            .importSource(statementType).detectedType(type).build());
+                }
+            }
+
+        } catch (StatementParseException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new StatementParseException("Failed to read CSV file: " + e.getMessage(), e);
+        }
+
+        aggregateDuplicates(holdings, warnings);
+        aggregateMfDuplicates(mfHoldings, warnings);
+
+        if (holdings.isEmpty() && mfHoldings.isEmpty()) {
+            warnings.add("No valid holdings were found. Ensure the file is a broker Holdings "
+                    + "export with an ISIN column, and that the required columns are present.");
+        }
+
+        return StatementPreviewDTO.builder()
+                .holdings(holdings).mfHoldings(mfHoldings)
+                .warnings(warnings).statementDate(null).build();
+    }
+
+    /** Splits a CSV line, respecting double-quoted fields. */
+    private static String[] parseCsvLine(String line) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQuote = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuote && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    sb.append('"'); i++;    // escaped quote ""
+                } else {
+                    inQuote = !inQuote;
+                }
+            } else if (c == ',' && !inQuote) {
+                tokens.add(sb.toString().trim());
+                sb.setLength(0);
+            } else {
+                sb.append(c);
+            }
+        }
+        tokens.add(sb.toString().trim());
+        return tokens.toArray(new String[0]);
+    }
+
+    private static String safeGet(String[] arr, int idx) {
+        return (idx >= 0 && idx < arr.length) ? arr[idx] : null;
+    }
+
+    private static BigDecimal parseCsvDecimal(String s) {
+        if (s == null || s.isBlank() || s.equals("-")) return null;
+        try {
+            return new BigDecimal(s.replace(",", "").replace("₹", "").replace("$", "").trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private InvestmentType resolveTypeFromStrings(String typeStr, String isin, String name) {
+        if (typeStr != null && !typeStr.isBlank()) {
+            String tl = typeStr.toLowerCase();
+            if (tl.contains("etf"))                            return InvestmentType.ETF;
+            if (tl.contains("mutual") || tl.contains("mf"))   return InvestmentType.MUTUAL_FUND;
+            if (tl.contains("bond")   || tl.contains("ncd")
+                    || tl.contains("debt"))                    return InvestmentType.BOND;
+            if (tl.contains("equity") || tl.contains("stock")) return InvestmentType.STOCK;
+        }
+        if (isin.startsWith("INF")) return InvestmentType.MUTUAL_FUND;
+        if (isin.startsWith("IN0") || isin.startsWith("ING")) return InvestmentType.BOND;
+        String nl = name.toLowerCase();
+        if (nl.contains(" etf") || nl.contains("exchange traded fund")) return InvestmentType.ETF;
+        if (nl.contains("bond") || nl.contains("debenture") || nl.contains(" ncd")
+                || nl.contains("gilt") || nl.contains("sgb"))           return InvestmentType.BOND;
+        return InvestmentType.STOCK;
     }
 
     private static class ColumnMap {
