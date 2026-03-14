@@ -91,15 +91,15 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     }
   };
 
-  const toggleEquity = (isin: string) => {
+  const toggleEquity = (key: string) => {
     const next = new Set(selectedEquities);
-    next.has(isin) ? next.delete(isin) : next.add(isin);
+    next.has(key) ? next.delete(key) : next.add(key);
     setSelectedEquities(next);
   };
 
-  const toggleMf = (isin: string) => {
+  const toggleMf = (key: string) => {
     const next = new Set(selectedMfs);
-    next.has(isin) ? next.delete(isin) : next.add(isin);
+    next.has(key) ? next.delete(key) : next.add(key);
     setSelectedMfs(next);
   };
 
@@ -107,7 +107,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     if (selectedEquities.size === preview?.holdings.length) {
       setSelectedEquities(new Set());
     } else {
-      setSelectedEquities(new Set(preview?.holdings.map(e => e.isin) || []));
+      setSelectedEquities(new Set(preview?.holdings.map(e => e.isin ?? e.symbol) || []));
     }
   };
 
@@ -115,7 +115,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     if (selectedMfs.size === preview?.mfHoldings.length) {
       setSelectedMfs(new Set());
     } else {
-      setSelectedMfs(new Set(preview?.mfHoldings.map(m => m.isin) || []));
+      setSelectedMfs(new Set(preview?.mfHoldings.map(m => m.isin ?? m.schemeName) || []));
     }
   };
 
@@ -294,16 +294,18 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.holdings.map(e => (
-                        <tr key={e.isin} className="border-b hover:bg-gray-50">
+                      {preview.holdings.map(e => {
+                        const eKey = e.isin ?? e.symbol;
+                        return (
+                        <tr key={eKey} className="border-b hover:bg-gray-50">
                           <td className="p-2">
                             <input
                               type="checkbox"
-                              checked={selectedEquities.has(e.isin)}
-                              onChange={() => toggleEquity(e.isin)}
+                              checked={selectedEquities.has(eKey)}
+                              onChange={() => toggleEquity(eKey)}
                             />
                           </td>
-                          <td className="p-2 font-mono text-xs">{e.isin}</td>
+                          <td className="p-2 font-mono text-xs">{e.isin ?? e.symbol}</td>
                           <td className="p-2">{e.name}</td>
                           <td className="text-right p-2">{e.quantity}</td>
                           <td className="text-right p-2">₹{e.avgCost != null ? e.avgCost.toFixed(2) : '—'}</td>
@@ -322,7 +324,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                             </Badge>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -351,16 +354,18 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.mfHoldings.map(m => (
-                        <tr key={m.isin} className="border-b hover:bg-gray-50">
+                      {preview.mfHoldings.map(m => {
+                        const mKey = m.isin ?? m.schemeName;
+                        return (
+                        <tr key={mKey} className="border-b hover:bg-gray-50">
                           <td className="p-2">
                             <input
                               type="checkbox"
-                              checked={selectedMfs.has(m.isin)}
-                              onChange={() => toggleMf(m.isin)}
+                              checked={selectedMfs.has(mKey)}
+                              onChange={() => toggleMf(mKey)}
                             />
                           </td>
-                          <td className="p-2 font-mono text-xs">{m.schemeCode ?? m.isin}</td>
+                          <td className="p-2 font-mono text-xs">{m.schemeCode ?? m.isin ?? '—'}</td>
                           <td className="p-2">{m.schemeName}</td>
                           <td className="text-right p-2">{m.units.toFixed(2)}</td>
                           <td className="text-right p-2">₹{m.avgCost != null ? m.avgCost.toFixed(2) : '—'}</td>
@@ -379,7 +384,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                             </Badge>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

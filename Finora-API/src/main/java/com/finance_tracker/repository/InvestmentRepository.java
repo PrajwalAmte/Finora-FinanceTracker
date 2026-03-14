@@ -20,4 +20,7 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
      * The DB partial unique index guarantees at most one result.
      */
     Optional<Investment> findByUserIdAndIsin(Long userId, String isin);
+
+    /** Symbol-based dedup for CSV imports that don't include ISIN. */
+    Optional<Investment> findFirstByUserIdAndSymbol(Long userId, String symbol);
 }

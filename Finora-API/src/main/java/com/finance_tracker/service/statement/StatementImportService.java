@@ -92,7 +92,8 @@ public class StatementImportService {
         Map<String, String> skippedReasons = new HashMap<>();
 
         for (ParsedHolding h : safeList(request.getHoldings())) {
-            if (!selectedIsins.contains(h.getIsin())) continue;
+            String key = h.getIsin() != null ? h.getIsin() : h.getSymbol();
+            if (!selectedIsins.contains(key)) continue;
             ImportOutcome outcome = saveHolding(h, statementType, userId, skippedReasons);
             imported += outcome.imported;
             updated  += outcome.updated;
@@ -100,7 +101,8 @@ public class StatementImportService {
         }
 
         for (ParsedMFHolding h : safeList(request.getMfHoldings())) {
-            if (!selectedIsins.contains(h.getIsin())) continue;
+            String key = h.getIsin() != null ? h.getIsin() : h.getSchemeName();
+            if (!selectedIsins.contains(key)) continue;
             ImportOutcome outcome = saveMfHolding(h, statementType, userId, skippedReasons);
             imported += outcome.imported;
             updated  += outcome.updated;
@@ -121,7 +123,15 @@ public class StatementImportService {
     private ImportOutcome saveHolding(ParsedHolding h, String statementType,
                                        Long userId, Map<String, String> skippedReasons) {
         // Re-resolve status inside transaction (TOCTOU guard)
-        Optional<Investment> existing = investmentRepository.findByUserIdAndIsin(userId, h.getIsin());
+        Optional<Investment> existing;
+        if (h.getIsin() != null) {
+            existing = investmentRepository.findByUserIdAndIsin(userId, h.getIsin());
+        } else {
+            // Symbol-only import (CSV without ISIN) — dedup by symbol
+            existing = h.getSymbol() != null
+                    ? investmentRepository.findFirstByUserIdAndSymbol(userId, h.getSymbol())
+                    : Optional.empty();
+        }
 
         if (existing.isPresent()) {
             Investment inv = existing.get();
@@ -204,9 +214,10 @@ public class StatementImportService {
         BigDecimal price = h.getAvgCost() != null ? h.getAvgCost() : BigDecimal.ZERO;
 
         Investment inv = new Investment();
-        inv.setName(h.getName() != null ? h.getName() : h.getIsin());
-        // CAS has no ticker; fall back to ISIN — normalizeSymbol() will append .NS for stocks
-        inv.setSymbol(h.getSymbol() != null ? h.getSymbol() : h.getIsin());
+        String nameVal   = h.getName()   != null ? h.getName()   : (h.getIsin() != null ? h.getIsin() : h.getSymbol());
+        String symbolVal = h.getSymbol() != null ? h.getSymbol() : (h.getIsin() != null ? h.getIsin() : nameVal);
+        inv.setName(nameVal != null ? nameVal : "UNKNOWN");
+        inv.setSymbol(symbolVal != null ? symbolVal : "UNKNOWN");
         inv.setType(h.getDetectedType() != null ? h.getDetectedType() : InvestmentType.STOCK);
         inv.setQuantity(h.getQuantity());
         inv.setPurchasePrice(price);
@@ -227,10 +238,15 @@ public class StatementImportService {
                 : (h.getAvgCost() != null ? h.getAvgCost() : BigDecimal.ZERO);
         BigDecimal avg = h.getAvgCost() != null ? h.getAvgCost() : BigDecimal.ZERO;
 
+        // Symbol for MF: prefer AMFI scheme code, then ISIN, then truncated scheme name
+        String mfSymbol = schemeCode != null ? schemeCode
+                : (h.getIsin() != null ? h.getIsin()
+                : (h.getSchemeName() != null ? h.getSchemeName() : "UNKNOWN_MF"));
+
         Investment inv = new Investment();
-        inv.setName(h.getSchemeName());
-        // symbol = AMFI scheme code (used by NAV scheduler); falls back to ISIN if not resolved
-        inv.setSymbol(schemeCode != null ? schemeCode : h.getIsin());
+        inv.setName(h.getSchemeName() != null ? h.getSchemeName() : mfSymbol);
+        // symbol = AMFI scheme code (used by NAV scheduler); falls back to ISIN or scheme name
+        inv.setSymbol(mfSymbol);
         inv.setType(InvestmentType.MUTUAL_FUND);
         inv.setQuantity(h.getUnits());
         inv.setPurchasePrice(avg);
