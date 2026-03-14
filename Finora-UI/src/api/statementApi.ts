@@ -1,50 +1,50 @@
 import apiClient from './apiClient';
 
 export interface StatementPreviewResponse {
-  equities: ParsedHolding[];
-  mfs: ParsedMFHolding[];
+  holdings: ParsedHolding[];
+  mfHoldings: ParsedMFHolding[];
   warnings: string[];
 }
 
 export interface ParsedHolding {
   isin: string;
   name: string;
+  symbol: string | null;
   quantity: number;
-  averageCost: number;
-  currentPrice: number | null;
-  importStatus: ImportStatus;
-  investmentType: string;
+  avgCost: number | null;
+  importSource: string;
+  detectedType: string;
+  status: ImportStatus;
 }
 
 export interface ParsedMFHolding {
-  schemeCode: string;
+  isin: string;
+  schemeCode: string | null;
   schemeName: string;
   units: number;
-  costPerUnit: number;
-  currentNav: number | null;
-  importStatus: ImportStatus;
-  status: string;
+  avgCost: number | null;
+  nav: number | null;
+  status: ImportStatus;
 }
 
 export enum ImportStatus {
   NEW = 'NEW',
   UPDATE = 'UPDATE',
   SKIP = 'SKIP',
+  SKIP_MANUAL = 'SKIP_MANUAL',
 }
 
 export interface StatementConfirmRequest {
+  selectedIsins: string[];
   statementType: string;
-  equities: string[]; // ISINs to import
-  mfs: string[]; // scheme codes to import
+  holdings: ParsedHolding[];
+  mfHoldings: ParsedMFHolding[];
 }
 
 export interface StatementImportResult {
-  equitiesImported: number;
-  equitiesUpdated: number;
-  equitiesSkipped: number;
-  mfsImported: number;
-  mfsUpdated: number;
-  mfsSkipped: number;
+  imported: number;
+  updated: number;
+  skipped: number;
   skippedReasons: Record<string, string>;
 }
 
@@ -59,20 +59,20 @@ const statementApi = {
     formData.append('statementType', statementType);
     if (password) formData.append('password', password);
 
-    const response = await apiClient.post<StatementPreviewResponse>(
-      '/api/statement/preview',
+    const response = await apiClient.post<{ data: StatementPreviewResponse }>(
+      '/statements/preview',
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
-    return response.data;
+    return response.data.data;
   },
 
   confirm: async (request: StatementConfirmRequest): Promise<StatementImportResult> => {
-    const response = await apiClient.post<StatementImportResult>(
-      '/api/statement/confirm',
+    const response = await apiClient.post<{ data: StatementImportResult }>(
+      '/statements/confirm',
       request
     );
-    return response.data;
+    return response.data.data;
   },
 };
 

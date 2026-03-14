@@ -97,25 +97,25 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     setSelectedEquities(next);
   };
 
-  const toggleMf = (code: string) => {
+  const toggleMf = (isin: string) => {
     const next = new Set(selectedMfs);
-    next.has(code) ? next.delete(code) : next.add(code);
+    next.has(isin) ? next.delete(isin) : next.add(isin);
     setSelectedMfs(next);
   };
 
   const toggleAllEquities = () => {
-    if (selectedEquities.size === preview?.equities.length) {
+    if (selectedEquities.size === preview?.holdings.length) {
       setSelectedEquities(new Set());
     } else {
-      setSelectedEquities(new Set(preview?.equities.map(e => e.isin) || []));
+      setSelectedEquities(new Set(preview?.holdings.map(e => e.isin) || []));
     }
   };
 
   const toggleAllMfs = () => {
-    if (selectedMfs.size === preview?.mfs.length) {
+    if (selectedMfs.size === preview?.mfHoldings.length) {
       setSelectedMfs(new Set());
     } else {
-      setSelectedMfs(new Set(preview?.mfs.map(m => m.schemeCode) || []));
+      setSelectedMfs(new Set(preview?.mfHoldings.map(m => m.isin) || []));
     }
   };
 
@@ -128,9 +128,10 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     setLoading(true);
     try {
       const req: StatementConfirmRequest = {
-        statementType,
-        equities: Array.from(selectedEquities),
-        mfs: Array.from(selectedMfs),
+        selectedIsins: [...Array.from(selectedEquities), ...Array.from(selectedMfs)],
+        statementType: getBackendType(statementType, file?.name ?? ''),
+        holdings: preview?.holdings ?? [],
+        mfHoldings: preview?.mfHoldings ?? [],
       };
       const res = await statementApi.confirm(req);
       setResult(res);
@@ -257,7 +258,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Equities & ETFs ({preview.equities.length})
+                Equities & ETFs ({preview.holdings.length})
               </button>
               <button
                 onClick={() => setSelectedTab('mfs')}
@@ -267,7 +268,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Mutual Funds ({preview.mfs.length})
+                Mutual Funds ({preview.mfHoldings.length})
               </button>
             </div>
 
@@ -281,7 +282,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
-                            checked={selectedEquities.size === preview.equities.length}
+                            checked={selectedEquities.size === preview.holdings.length}
                             onChange={toggleAllEquities}
                           />
                         </th>
@@ -293,7 +294,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.equities.map(e => (
+                      {preview.holdings.map(e => (
                         <tr key={e.isin} className="border-b hover:bg-gray-50">
                           <td className="p-2">
                             <input
@@ -305,19 +306,19 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                           <td className="p-2 font-mono text-xs">{e.isin}</td>
                           <td className="p-2">{e.name}</td>
                           <td className="text-right p-2">{e.quantity}</td>
-                          <td className="text-right p-2">₹{e.averageCost.toFixed(2)}</td>
+                          <td className="text-right p-2">₹{e.avgCost != null ? e.avgCost.toFixed(2) : '—'}</td>
                           <td className="p-2">
                             <Badge
                             size="sm"
                             variant={
-                              e.importStatus === ImportStatus.NEW
+                              e.status === ImportStatus.NEW
                                 ? 'success'
-                                : e.importStatus === ImportStatus.UPDATE
+                                : e.status === ImportStatus.UPDATE
                                   ? 'warning'
                                   : 'outline'
                               }
                             >
-                              {e.importStatus}
+                              {e.status}
                             </Badge>
                           </td>
                         </tr>
@@ -338,7 +339,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
-                            checked={selectedMfs.size === preview.mfs.length}
+                            checked={selectedMfs.size === preview.mfHoldings.length}
                             onChange={toggleAllMfs}
                           />
                         </th>
@@ -350,31 +351,31 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.mfs.map(m => (
-                        <tr key={m.schemeCode} className="border-b hover:bg-gray-50">
+                      {preview.mfHoldings.map(m => (
+                        <tr key={m.isin} className="border-b hover:bg-gray-50">
                           <td className="p-2">
                             <input
                               type="checkbox"
-                              checked={selectedMfs.has(m.schemeCode)}
-                              onChange={() => toggleMf(m.schemeCode)}
+                              checked={selectedMfs.has(m.isin)}
+                              onChange={() => toggleMf(m.isin)}
                             />
                           </td>
-                          <td className="p-2 font-mono text-xs">{m.schemeCode}</td>
+                          <td className="p-2 font-mono text-xs">{m.schemeCode ?? m.isin}</td>
                           <td className="p-2">{m.schemeName}</td>
                           <td className="text-right p-2">{m.units.toFixed(2)}</td>
-                          <td className="text-right p-2">₹{m.costPerUnit.toFixed(2)}</td>
+                          <td className="text-right p-2">₹{m.avgCost != null ? m.avgCost.toFixed(2) : '—'}</td>
                           <td className="p-2">
                             <Badge
                               size="sm"
                               variant={
-                                m.importStatus === ImportStatus.NEW
+                                m.status === ImportStatus.NEW
                                   ? 'success'
-                                  : m.importStatus === ImportStatus.UPDATE
+                                  : m.status === ImportStatus.UPDATE
                                     ? 'warning'
                                     : 'outline'
                               }
                             >
-                              {m.importStatus}
+                              {m.status}
                             </Badge>
                           </td>
                         </tr>
@@ -418,17 +419,10 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
         {/* Step 3: Result */}
         {step === 3 && result && (
           <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded">
-              <p className="text-lg font-semibold text-green-900">
-                ✓ {result.equitiesImported} imported · {result.equitiesUpdated} updated ·{' '}
-                {result.equitiesSkipped} skipped
+            <div className="p-4 bg-green-50 border border-green-200 rounded dark:bg-green-900/20 dark:border-green-700">
+              <p className="text-lg font-semibold text-green-900 dark:text-green-300">
+                ✓ {result.imported} imported · {result.updated} updated · {result.skipped} skipped
               </p>
-              {(result.mfsImported || result.mfsUpdated || result.mfsSkipped) > 0 && (
-                <p className="text-sm text-green-800 mt-2">
-                  MFs: {result.mfsImported} imported · {result.mfsUpdated} updated ·{' '}
-                  {result.mfsSkipped} skipped
-                </p>
-              )}
             </div>
 
             {Object.keys(result.skippedReasons).length > 0 && (
