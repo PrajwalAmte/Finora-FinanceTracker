@@ -58,17 +58,17 @@ public class UserService {
 
     @Transactional
     public AuthResponseDTO login(LoginRequestDTO request) {
-        String username = request.getUsername().trim().toLowerCase();
+        String email = request.getEmail().trim().toLowerCase();
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ValidationException("Invalid username or password"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ValidationException("Invalid email or password"));
 
         if (!user.isActive()) {
             throw new ValidationException("Account is disabled");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new ValidationException("Invalid username or password");
+            throw new ValidationException("Invalid email or password");
         }
 
         user.setLastLoginAt(OffsetDateTime.now());
@@ -80,6 +80,25 @@ public class UserService {
                 .token(token)
                 .user(toDTO(user))
                 .build();
+    }
+
+    @Transactional
+    public UserResponseDTO updateProfile(Long userId, UpdateProfileRequestDTO request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (request.getUsername() != null) {
+            String newUsername = request.getUsername().trim().toLowerCase();
+            if (!newUsername.equals(user.getUsername())) {
+                if (userRepository.existsByUsername(newUsername)) {
+                    throw new ValidationException("Username already taken");
+                }
+                user.setUsername(newUsername);
+            }
+        }
+
+        user.setUpdatedAt(OffsetDateTime.now());
+        return toDTO(userRepository.save(user));
     }
 
     @Transactional(readOnly = true)

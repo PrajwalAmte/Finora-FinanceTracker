@@ -12,7 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   vaultUnlocked: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -72,8 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(authResponse.user);
   };
 
-  const login = useCallback(async (username: string, password: string) => {
-    const authResponse = await loginApi(username, password);
+  const login = useCallback(async (email: string, password: string) => {
+    const authResponse = await loginApi(email, password);
     persistAuth(authResponse);
   }, []);
 

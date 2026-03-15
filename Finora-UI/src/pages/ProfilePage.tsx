@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Calendar, Clock, LogOut, Shield, Lock, Unlock, AlertTriangle, HelpCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Calendar, Clock, LogOut, Shield, Lock, Unlock, AlertTriangle, HelpCircle, CheckCircle, Pencil, X, Check } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -11,6 +11,7 @@ import { toast } from '../utils/notifications';
 import { formatDate } from '../utils/formatters';
 import { vaultApi } from '../api/vaultApi';
 import { deriveVaultKey } from '../utils/vault-crypto';
+import { updateProfileApi } from '../api/authApi';
 
 const VAULT_CONFIRM_TEXT = 'I understand I will permanently lose all data if I lose this passphrase';
 
@@ -48,6 +49,37 @@ export const ProfilePage: React.FC = () => {
   const [passphraseConfirm, setPassphraseConfirm] = useState('');
   const [confirmText, setConfirmText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Username edit state
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(false);
+
+  const handleSaveUsername = async () => {
+    const trimmed = newUsername.trim().toLowerCase();
+    if (trimmed.length < 3) {
+      toast.error('Username must be at least 3 characters');
+      return;
+    }
+    if (trimmed === user?.username) {
+      setEditingUsername(false);
+      return;
+    }
+    setUsernameLoading(true);
+    try {
+      await updateProfileApi(trimmed);
+      await refreshUser();
+      toast.success('Username updated');
+      setEditingUsername(false);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Failed to update username';
+      toast.error(msg);
+    } finally {
+      setUsernameLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -173,7 +205,52 @@ export const ProfilePage: React.FC = () => {
       {/* Account details */}
       <Card title="Account Details" icon={<User size={18} />}>
         <div>
-          <InfoRow icon={<User size={15} />} label="Username" value={user.username} />
+          {/* Username — editable */}
+          <div className="flex items-center py-3 border-b border-neutral-100 dark:border-neutral-700">
+            <div className="flex items-center w-40 shrink-0 text-neutral-500 dark:text-neutral-400 text-sm">
+              <span className="mr-2"><User size={15} /></span>
+              Username
+            </div>
+            {editingUsername ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveUsername(); if (e.key === 'Escape') setEditingUsername(false); }}
+                  className="flex-1 text-sm border border-neutral-300 dark:border-neutral-600 rounded-md px-2 py-1 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  autoFocus
+                  maxLength={50}
+                />
+                <button
+                  onClick={handleSaveUsername}
+                  disabled={usernameLoading}
+                  className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                  title="Save"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  onClick={() => setEditingUsername(false)}
+                  className="p-1 text-neutral-400 hover:text-neutral-600"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-sm text-neutral-900 dark:text-neutral-100 font-medium">{user.username}</span>
+                <button
+                  onClick={() => { setNewUsername(user.username); setEditingUsername(true); }}
+                  className="p-1 text-neutral-400 hover:text-primary-500 transition-colors"
+                  title="Edit username"
+                >
+                  <Pencil size={13} />
+                </button>
+              </div>
+            )}
+          </div>
           <InfoRow icon={<Mail size={15} />} label="Email" value={user.email} />
         </div>
       </Card>

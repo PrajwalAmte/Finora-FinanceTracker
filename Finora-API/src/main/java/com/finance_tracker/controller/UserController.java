@@ -24,6 +24,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserByUserId(userId)));
     }
 
+    @PatchMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequestDTO request) {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(userId, request)));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponseDTO>>> getAllUsers() {
         return ResponseEntity.ok(ApiResponse.success(userService.getAllUsers()));
