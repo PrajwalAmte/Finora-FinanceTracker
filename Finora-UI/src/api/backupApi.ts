@@ -1,7 +1,6 @@
 import apiClient from './apiClient';
 import { TOKEN_KEY } from '../utils/auth-context';
 
-const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || 'http://localhost:8082';
 const BASE_PATH = '/backup';
 
 export interface BackupMetadata {
@@ -26,7 +25,7 @@ export const backupApi = {
   exportBackup: async (password: string): Promise<Blob> => {
     const token = localStorage.getItem(TOKEN_KEY);
 
-    const response = await fetch(`${BACKEND_URL}/api${BASE_PATH}/export`, {
+    const response = await fetch(`/api${BASE_PATH}/export`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
