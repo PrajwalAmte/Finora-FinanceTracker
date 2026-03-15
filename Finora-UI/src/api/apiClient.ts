@@ -2,8 +2,8 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { toast } from "../utils/notifications";
 import { TOKEN_KEY, VAULT_KEY_STORAGE } from "../utils/auth-context";
 
-const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || "http://localhost:8082";
-const API_BASE_URL = `${BACKEND_URL}/api`;
+const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL ?? '';
+const API_BASE_URL = BACKEND_URL ? `${BACKEND_URL}/api` : '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
