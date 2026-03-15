@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, LineChart, Download, Search, Upload, RefreshCw } from 'lucide-react';
+import { Plus, LineChart, Download, Search, Upload, RefreshCw, TrendingUp } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,8 @@ import { Dialog } from '../components/ui/Dialog';
 import { SipForm } from '../components/forms/SipForm';
 import { SipActions } from '../components/forms/SipActions';
 import { StatementUploadDialog } from '../components/StatementUploadDialog';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Pagination } from '../components/ui/Pagination';
 import { Sip, SipSummary } from '../types/Sip';
 import { sipApi } from '../api/sipApi';
 import { formatCurrency, formatDate, getStatusColorClass, formatPercentage } from '../utils/formatters';
@@ -14,11 +16,14 @@ import { PieChart } from '../components/charts/PieChart';
 import { generateSipReport } from '../utils/excel-generator';
 import { toast } from '../utils/notifications';
 
+const ITEMS_PER_PAGE = 10;
+
 export const SipsPage: React.FC = () => {
   const [sips, setSips] = useState<Sip[]>([]);
   const [summary, setSummary] = useState<SipSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -29,6 +34,10 @@ export const SipsPage: React.FC = () => {
   useEffect(() => {
     loadSips();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const loadSips = async () => {
     try {
@@ -49,6 +58,12 @@ export const SipsPage: React.FC = () => {
   const filteredSips = sips.filter(sip => 
     sip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (sip.schemeCode ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredSips.length / ITEMS_PER_PAGE);
+  const paginatedSips = filteredSips.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
   const calculateReturnPercentage = (invested: number, currentValue: number): number => {
@@ -209,110 +224,134 @@ export const SipsPage: React.FC = () => {
         <div className="lg:col-span-2">
           <Card title="SIP Plans" isLoading={isLoading}>
             {filteredSips.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-neutral-500 dark:text-neutral-400">No SIPs found</p>
-                <Button 
-                  className="mt-3" 
-                  variant="primary" 
-                  iconLeft={<Plus size={18} />}
-                  onClick={() => {
-              setFormKey(prev => prev + 1);
-              setIsAddDialogOpen(true);
-            }}
-                >
-                  Add SIP
-                </Button>
-              </div>
+              <EmptyState
+                icon={<TrendingUp size={48} />}
+                title="No SIPs found"
+                description="SIPs help you invest regularly in mutual funds"
+                action={
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      iconLeft={<Upload size={18} />}
+                      onClick={() => setIsImportDialogOpen(true)}
+                    >
+                      Import Statement
+                    </Button>
+                    <Button 
+                      variant="primary" 
+                      iconLeft={<Plus size={18} />}
+                      onClick={() => {
+                        setFormKey(prev => prev + 1);
+                        setIsAddDialogOpen(true);
+                      }}
+                    >
+                      Add Manually
+                    </Button>
+                  </div>
+                }
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">SIP Name</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Monthly Amount</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">NAV</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Units</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Invested</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Current Value</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Return %</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-                    {filteredSips.map((sip) => {
-                      const due = isPaymentDue(sip);
-                      return (
-                      <tr 
-                        key={sip.id} 
-                        className={`hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${
-                          due ? 'border-l-4 border-l-amber-400 dark:border-l-amber-500' : ''
-                        }`}
-                      >
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-start">
-                            <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900">
-                              <LineChart size={16} className="text-primary-600 dark:text-primary-400" />
-                            </div>
-                            <div className="ml-3">
-                              <div className="flex items-center gap-2">
-                                <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
-                                {sip.investmentId && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
-                                    Linked
-                                  </span>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">SIP Name</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Monthly Amount</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">NAV</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Units</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Invested</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Current Value</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Return %</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                      {paginatedSips.map((sip) => {
+                        const due = isPaymentDue(sip);
+                        return (
+                        <tr 
+                          key={sip.id} 
+                          className={`hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${
+                            due ? 'border-l-4 border-l-amber-400 dark:border-l-amber-500' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900">
+                                <LineChart size={16} className="text-primary-600 dark:text-primary-400" />
+                              </div>
+                              <div className="ml-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm font-medium text-neutral-900 dark:text-white">{sip.name}</div>
+                                  {sip.investmentId && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+                                      Linked
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400">Next: {formatDate(sip.startDate)}</div>
+                                {due && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Payment due</span>
+                                    <button
+                                      onClick={() => handleMarkPaid(sip)}
+                                      disabled={payingId === sip.id}
+                                      className="text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 disabled:opacity-50 transition"
+                                    >
+                                      {payingId === sip.id ? 'Saving…' : 'Mark Paid'}
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-                              <div className="text-xs text-neutral-500 dark:text-neutral-400">Next: {formatDate(sip.startDate)}</div>
-                              {due && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Payment due this month</span>
-                                  <button
-                                    onClick={() => handleMarkPaid(sip)}
-                                    disabled={payingId === sip.id}
-                                    className="text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 disabled:opacity-50 transition"
-                                  >
-                                    {payingId === sip.id ? 'Saving…' : 'Mark Paid'}
-                                  </button>
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatCurrency(sip.monthlyAmount)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatCurrency(sip.currentNav)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {sip.totalUnits != null ? sip.totalUnits.toFixed(2) : '—'}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatCurrency(sip.totalInvested || 0)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">
-                          {formatCurrency(sip.currentValue || 0)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {sip.totalInvested && sip.currentValue && (
-                            <span className={getStatusColorClass((sip.currentValue - sip.totalInvested))}>
-                              {formatPercentage(calculateReturnPercentage(sip.totalInvested, sip.currentValue))}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                          <SipActions
-                            sip={sip}
-                            onUpdate={handleUpdateSip}
-                            onDelete={handleDeleteSip}
-                          />
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatCurrency(sip.monthlyAmount)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatCurrency(sip.currentNav)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {sip.totalUnits != null ? sip.totalUnits.toFixed(2) : '—'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatCurrency(sip.totalInvested || 0)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">
+                            {formatCurrency(sip.currentValue || 0)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {sip.totalInvested && sip.currentValue && (
+                              <span className={getStatusColorClass((sip.currentValue - sip.totalInvested))}>
+                                {formatPercentage(calculateReturnPercentage(sip.totalInvested, sip.currentValue))}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-center">
+                            <SipActions
+                              sip={sip}
+                              onUpdate={handleUpdateSip}
+                              onDelete={handleDeleteSip}
+                            />
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredSips.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    className="mt-4"
+                  />
+                )}
+              </>
             )}
           </Card>
         </div>
@@ -322,7 +361,6 @@ export const SipsPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Add SIP Dialog */}
       <Dialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
@@ -336,7 +374,6 @@ export const SipsPage: React.FC = () => {
         />
       </Dialog>
 
-      {/* Import Statement Dialog */}
       <StatementUploadDialog
         isOpen={isImportDialogOpen}
         onClose={(success) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CreditCard, Download, Search } from 'lucide-react';
+import { Plus, CreditCard, Download, Search, Wallet } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,8 @@ import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
 import { LoanForm } from '../components/forms/LoanForm';
 import { LoanActions } from '../components/forms/LoanActions';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Pagination } from '../components/ui/Pagination';
 import { Loan, LoanSummary } from '../types/Loan';
 import { loanApi } from '../api/loanApi';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -14,11 +16,14 @@ import { PieChart } from '../components/charts/PieChart';
 import { BarChart } from '../components/charts/BarChart';
 import { generateLoanReport } from '../utils/excel-generator';
 
+const ITEMS_PER_PAGE = 10;
+
 export const LoansPage: React.FC = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [summary, setSummary] = useState<LoanSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +39,6 @@ export const LoansPage: React.FC = () => {
         setLoans(loansData);
         setSummary(summaryData);
       } catch {
-        // Error handled by apiClient interceptor
       } finally {
         setIsLoading(false);
       }
@@ -42,9 +46,19 @@ export const LoansPage: React.FC = () => {
     loadLoans();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const filteredLoans = loans.filter(loan => 
     loan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     loan.interestType.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredLoans.length / ITEMS_PER_PAGE);
+  const paginatedLoans = filteredLoans.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
   const getLoanDistributionData = () => {
@@ -166,94 +180,109 @@ export const LoansPage: React.FC = () => {
         <div className="lg:col-span-2">
           <Card title="Loan Portfolio" isLoading={isLoading}>
             {filteredLoans.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-neutral-500 dark:text-neutral-400">No loans found</p>
-                <Button 
-                  className="mt-3" 
-                  variant="primary" 
-                  iconLeft={<Plus size={18} />}
-                  onClick={() => {
-              setFormKey(prev => prev + 1);
-              setIsAddDialogOpen(true);
-            }}
-                >
-                  Add Loan
-                </Button>
-              </div>
+              <EmptyState
+                icon={<Wallet size={48} />}
+                title="No loans found"
+                description="Keep track of your loans and EMIs in one place"
+                action={
+                  <Button 
+                    variant="primary" 
+                    iconLeft={<Plus size={18} />}
+                    onClick={() => {
+                      setFormKey(prev => prev + 1);
+                      setIsAddDialogOpen(true);
+                    }}
+                  >
+                    Add Loan
+                  </Button>
+                }
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Loan</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Principal</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Interest Rate</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">EMI</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Start Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Remaining</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Balance</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-                    {filteredLoans.map((loan) => (
-                      <tr 
-                        key={loan.id} 
-                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                      >
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-start">
-                            <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-error-100 dark:bg-error-900">
-                              <CreditCard size={16} className="text-error-600 dark:text-error-400" />
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-neutral-900 dark:text-white">{loan.name}</div>
-                              <div className="flex items-center">
-                                <Badge 
-                                  variant={loan.interestType === 'SIMPLE' ? 'primary' : 'warning'} 
-                                  size="sm"
-                                >
-                                  {loan.interestType}
-                                </Badge>
-                                {loan.compoundingFrequency && (
-                                  <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">
-                                    {loan.compoundingFrequency}
-                                  </span>
-                                )}
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Loan</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Principal</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Interest Rate</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">EMI</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Start Date</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Remaining</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Balance</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                      {paginatedLoans.map((loan) => (
+                        <tr 
+                          key={loan.id} 
+                          className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-error-100 dark:bg-error-900">
+                                <CreditCard size={16} className="text-error-600 dark:text-error-400" />
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-neutral-900 dark:text-white">{loan.name}</div>
+                                <div className="flex items-center">
+                                  <Badge 
+                                    variant={loan.interestType === 'SIMPLE' ? 'primary' : 'warning'} 
+                                    size="sm"
+                                  >
+                                    {loan.interestType}
+                                  </Badge>
+                                  {loan.compoundingFrequency && (
+                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">
+                                      {loan.compoundingFrequency}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatCurrency(loan.principalAmount)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {loan.interestRate}%
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatCurrency(loan.emiAmount || 0)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {formatDate(loan.startDate)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                          {loan.remainingMonths || 0} months
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">
-                          {formatCurrency(loan.currentBalance)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                          <LoanActions
-                            loan={loan}
-                            onUpdate={handleUpdateLoan}
-                            onDelete={handleDeleteLoan}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatCurrency(loan.principalAmount)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {loan.interestRate}%
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatCurrency(loan.emiAmount || 0)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {formatDate(loan.startDate)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
+                            {loan.remainingMonths || 0} months
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">
+                            {formatCurrency(loan.currentBalance)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-center">
+                            <LoanActions
+                              loan={loan}
+                              onUpdate={handleUpdateLoan}
+                              onDelete={handleDeleteLoan}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredLoans.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    className="mt-4"
+                  />
+                )}
+              </>
             )}
           </Card>
         </div>
@@ -289,7 +318,6 @@ export const LoansPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Add Loan Dialog */}
       <Dialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}

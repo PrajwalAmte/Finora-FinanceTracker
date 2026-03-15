@@ -227,13 +227,18 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
   return (
     <Dialog isOpen={isOpen} onClose={handleClose} title="Import Statement">
       <div className="max-w-2xl">
-        {/* Step 1: Select & Upload */}
         {step === 1 && (
           <div className="space-y-6">
-            {/* Statement Type Selection */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Import your holdings from CAS, CAMS, or broker exports. 
+                We'll automatically match your investments and update values.
+              </p>
+            </div>
+
             <div className="space-y-3">
-              <label className="text-sm font-semibold">Statement Type</label>
-              <div className="grid grid-cols-3 gap-3">
+              <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Statement Type</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(['CAS', 'CAMS', 'HOLDINGS_FILE'] as const).map(type => (
                   <button
                     key={type}
@@ -248,15 +253,21 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    {type === 'HOLDINGS_FILE' ? 'Holdings File' : type}
+                    <span className="block font-medium">
+                      {type === 'HOLDINGS_FILE' ? 'Holdings File' : type}
+                    </span>
+                    <span className="block text-xs mt-1 opacity-75">
+                      {type === 'CAS' && 'Consolidated Account Statement'}
+                      {type === 'CAMS' && 'CAMS Statement PDF'}
+                      {type === 'HOLDINGS_FILE' && 'Zerodha/Broker Excel'}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* File Drop Zone */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold">Upload File</label>
+              <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Upload File</label>
               <label className="block p-6 border-2 border-dashed rounded-lg text-center cursor-pointer hover:border-blue-500 transition">
                 <input
                   type="file"
@@ -282,10 +293,9 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </label>
             </div>
 
-            {/* Password Field */}
             {statementType !== 'HOLDINGS_FILE' && (
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-semibold">
+                <label htmlFor="password" className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                   Password
                 </label>
                 <Input
@@ -299,7 +309,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </div>
             )}
 
-            {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={handleClose}>
                 Cancel

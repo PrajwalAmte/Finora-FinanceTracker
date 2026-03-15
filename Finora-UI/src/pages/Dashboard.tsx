@@ -1,24 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { TrendingUp, CreditCard, DollarSign, BarChart4, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { TrendingUp, CreditCard, DollarSign, ArrowRight } from 'lucide-react';
 import { DashboardMetricCard } from '../components/dashboard/DashboardMetricCard';
 import { Card } from '../components/ui/Card';
 import { PieChart } from '../components/charts/PieChart';
 import { Button } from '../components/ui/Button';
+import { DateRangePicker, DateRange, DatePreset } from '../components/ui/DateRangePicker';
+import { WelcomeOnboarding, QuickActions } from '../components/dashboard/WelcomeOnboarding';
 import { summaryApi, ComprehensiveFinanceSummary } from '../api/summaryApi';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = new Date();
+    return {
+      startDate: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
+      endDate: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+      preset: 'thisMonth' as DatePreset
+    };
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-        const result = await summaryApi.getComprehensiveSummary(firstDayOfMonth, lastDayOfMonth);
+        const result = await summaryApi.getComprehensiveSummary(dateRange.startDate, dateRange.endDate);
         setSummary(result);
       } catch {
         // Error handled by apiClient interceptor
@@ -27,7 +35,7 @@ export const Dashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [dateRange]);
 
   const getExpenseCategoryData = () => {
     if (!summary?.expenseSummary?.expensesByCategory) return [];
@@ -60,19 +68,34 @@ export const Dashboard: React.FC = () => {
   return (totalProfitLoss / totalInvested) * 100;
 };
 
+  const hasData = summary && (
+    (summary.expenseSummary?.totalExpenses || 0) > 0 ||
+    (summary.investmentSummary?.totalValue || 0) > 0 ||
+    (summary.sipSummary?.totalCurrentValue || 0) > 0 ||
+    (summary.loanSummary?.totalBalance || 0) > 0
+  );
+
   return (
-    <div className="animate-fade-in">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Net Worth */}
+    <div className="animate-fade-in space-y-6">
+      {!isLoading && !hasData && <WelcomeOnboarding />}
+      
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          {!isLoading && !hasData && <QuickActions />}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <DashboardMetricCard
           title="Net Worth"
           value={summary?.netWorth || 0}
           icon={<TrendingUp />}
           isLoading={isLoading}
-          onClick={() => {}}
+          onClick={() => navigate('/investments')}
         />
         
-        {/* Total Investments */}
         <DashboardMetricCard
           title="Investments"
           value={summary?.totalAssets || 0}
@@ -80,43 +103,41 @@ export const Dashboard: React.FC = () => {
           changeLabel="Overall Return"
           icon={<TrendingUp />}
           isLoading={isLoading}
-          onClick={() => {}}
+          onClick={() => navigate('/investments')}
         />
         
-        {/* Total Loans */}
         <DashboardMetricCard
           title="Loan Balance"
           value={summary?.loanSummary?.totalBalance || 0}
           icon={<CreditCard />}
           isLoading={isLoading}
-          onClick={() => {}}
+          onClick={() => navigate('/loans')}
         />
         
-        {/* Monthly Expenses */}
         <DashboardMetricCard
           title="Monthly Expenses"
           value={summary?.expenseSummary?.totalExpenses || 0}
           icon={<DollarSign />}
           isLoading={isLoading}
-          onClick={() => {}}
+          onClick={() => navigate('/expenses')}
         />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Asset Allocation Chart */}
         <Card
           title="Asset Allocation"
           isLoading={isLoading}
           footer={
             <div className="flex justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                iconRight={<ArrowRight size={16} />}
-                onClick={() => {}}
-              >
-                <Link to="/investments">View Investments</Link>
-              </Button>
+              <Link to="/investments">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  iconRight={<ArrowRight size={16} />}
+                >
+                  View Investments
+                </Button>
+              </Link>
             </div>
           }
         >
@@ -126,20 +147,20 @@ export const Dashboard: React.FC = () => {
           />
         </Card>
         
-        {/* Expense Breakdown Chart */}
         <Card
           title="Expense Breakdown"
           isLoading={isLoading}
           footer={
             <div className="flex justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                iconRight={<ArrowRight size={16} />}
-                onClick={() => {}}
-              >
-                <Link to="/expenses">View Expenses</Link>
-              </Button>
+              <Link to="/expenses">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  iconRight={<ArrowRight size={16} />}
+                >
+                  View Expenses
+                </Button>
+              </Link>
             </div>
           }
         >

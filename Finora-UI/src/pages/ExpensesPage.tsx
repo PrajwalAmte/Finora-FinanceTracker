@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, Calendar, Search } from 'lucide-react';
+import { Plus, Download, Calendar, Search, Receipt } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -8,6 +8,8 @@ import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
 import { ExpenseForm } from '../components/forms/ExpenseForm';
 import { ExpenseActions } from '../components/forms/ExpenseActions';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Pagination } from '../components/ui/Pagination';
 import { Expense, ExpenseSummary } from '../types/Expense';
 import { expenseApi } from '../api/expenseApi';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -17,6 +19,8 @@ import { generateExpenseReport } from '../utils/excel-generator';
 import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../constants';
 import { toast } from '../utils/notifications';
 
+const ITEMS_PER_PAGE = 10;
+
 export const ExpensesPage: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
@@ -24,9 +28,10 @@ export const ExpensesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
-    date.setDate(1); // First day of current month
+    date.setDate(1);
     return date.toISOString().split('T')[0];
   });
   
@@ -62,6 +67,10 @@ export const ExpensesPage: React.FC = () => {
     }
   }, [startDate, endDate]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, paymentMethodFilter]);
+
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           expense.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -70,6 +79,12 @@ export const ExpensesPage: React.FC = () => {
     
     return matchesSearch && matchesCategory && matchesPaymentMethod;
   });
+
+  const totalPages = Math.ceil(filteredExpenses.length / ITEMS_PER_PAGE);
+  const paginatedExpenses = filteredExpenses.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const getCategoryData = () => {
     const categories: Record<string, number> = {};
@@ -260,66 +275,81 @@ export const ExpensesPage: React.FC = () => {
             </div>
             
             {filteredExpenses.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-neutral-500 dark:text-neutral-400">No expenses found</p>
-                <Button 
-                  className="mt-3" 
-                  variant="primary" 
-                  iconLeft={<Plus size={18} />}
-                  onClick={() => {
-                    setFormKey(prev => prev + 1);
-                    setIsAddDialogOpen(true);
-                  }}
-                >
-                  Add Expense
-                </Button>
-              </div>
+              <EmptyState
+                icon={<Receipt size={48} />}
+                title="No expenses found"
+                description="Start tracking your spending by adding your first expense"
+                action={
+                  <Button 
+                    variant="primary" 
+                    iconLeft={<Plus size={18} />}
+                    onClick={() => {
+                      setFormKey(prev => prev + 1);
+                      setIsAddDialogOpen(true);
+                    }}
+                  >
+                    Add Expense
+                  </Button>
+                }
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Date</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Category</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Payment</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-                    {filteredExpenses.map((expense) => (
-                      <tr 
-                        key={expense.id} 
-                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                      >
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-neutral-900 dark:text-white">{expense.description}</div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-neutral-500 dark:text-neutral-400">
-                          {formatDate(expense.date, 'MMM dd, yyyy')}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                          <Badge variant="primary" size="sm">{expense.category}</Badge>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-neutral-500 dark:text-neutral-400">
-                          {expense.paymentMethod}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-error-600 dark:text-error-400">
-                          {formatCurrency(expense.amount)}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                          <ExpenseActions
-                            expense={expense}
-                            onUpdate={handleUpdateExpense}
-                            onDelete={handleDeleteExpense}
-                          />
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Category</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Payment</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Amount</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                      {paginatedExpenses.map((expense) => (
+                        <tr 
+                          key={expense.id} 
+                          className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-neutral-900 dark:text-white">{expense.description}</div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-neutral-500 dark:text-neutral-400">
+                            {formatDate(expense.date, 'MMM dd, yyyy')}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-center">
+                            <Badge variant="primary" size="sm">{expense.category}</Badge>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-neutral-500 dark:text-neutral-400">
+                            {expense.paymentMethod}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-error-600 dark:text-error-400">
+                            {formatCurrency(expense.amount)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-center">
+                            <ExpenseActions
+                              expense={expense}
+                              onUpdate={handleUpdateExpense}
+                              onDelete={handleDeleteExpense}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredExpenses.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    className="mt-4"
+                  />
+                )}
+              </>
             )}
           </Card>
         </div>

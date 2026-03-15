@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Calendar, Clock, LogOut, Shield, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import { User, Mail, Calendar, Clock, LogOut, Shield, Lock, Unlock, AlertTriangle, HelpCircle, CheckCircle } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -181,15 +181,35 @@ export const ProfilePage: React.FC = () => {
       {/* Vault Encryption */}
       <Card title="Vault Encryption" icon={<Shield size={18} />}>
         <div className="space-y-4">
+          <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-700">
+            <div className="flex items-start gap-3">
+              <HelpCircle size={20} className="text-primary-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-neutral-900 dark:text-white mb-2">
+                  What is Vault Encryption?
+                </p>
+                <ul className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle size={12} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>Additional security layer using your personal passphrase</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle size={12} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>Data encrypted on your device before reaching server</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle size={12} className="text-green-500 shrink-0 mt-0.5" />
+                    <span>Only you can decrypt with your passphrase</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                Extra encryption layer with your personal passphrase
-              </p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                {user.vaultEnabled
-                  ? 'Your data is protected with vault encryption'
-                  : 'Add an additional layer of security to your sensitive data'}
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                Status
               </p>
             </div>
             <Badge variant={user.vaultEnabled ? 'success' : 'neutral'} size="sm">
@@ -198,7 +218,7 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {user.vaultEnabled ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {vaultUnlocked ? (
                 <>
                   <Badge variant="success" size="sm">
@@ -282,14 +302,21 @@ export const ProfilePage: React.FC = () => {
         title="Enable Vault Encryption"
       >
         <div className="space-y-4">
+          <div className="p-3 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700 rounded-lg">
+            <p className="text-sm text-primary-800 dark:text-primary-200">
+              Create a passphrase to encrypt your sensitive financial data. 
+              This works like a second password that only you know.
+            </p>
+          </div>
+
           <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg">
             <div className="flex items-start gap-2">
               <AlertTriangle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={18} />
               <div className="text-sm text-amber-800 dark:text-amber-200">
-                <p className="font-semibold">Warning: No recovery option</p>
+                <p className="font-semibold">Important: Save your passphrase securely</p>
                 <p className="mt-1">
-                  If you lose your passphrase, your encrypted data cannot be recovered.
-                  There is no password reset or recovery mechanism.
+                  We cannot recover your data if you forget this passphrase. 
+                  Consider using a password manager.
                 </p>
               </div>
             </div>

@@ -12,9 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for API URL - now using relative path since nginx proxies
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Build with API path
+ENV VITE_API_BASE_URL=/api
 
 # Build the application
 RUN npm run build
@@ -28,8 +27,11 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy custom NGINX configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port
+# Expose port (Railway sets PORT env var)
 EXPOSE 80
+
+# Start NGINX - it will use PORT env var from Railway
+CMD ["sh", "-c", "nginx -g 'daemon off; events { worker_connections 256; }'"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
