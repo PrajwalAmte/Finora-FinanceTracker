@@ -4,7 +4,9 @@ import com.finance_tracker.dto.SipRequestDTO;
 import com.finance_tracker.dto.SipResponseDTO;
 import com.finance_tracker.dto.SipSummaryDTO;
 import com.finance_tracker.mapper.SipMapper;
+import com.finance_tracker.model.Investment;
 import com.finance_tracker.model.Sip;
+import com.finance_tracker.repository.InvestmentRepository;
 import com.finance_tracker.service.SipService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/sips")
@@ -19,17 +23,31 @@ import java.util.List;
 public class SipController {
     private final SipService sipService;
     private final SipMapper sipMapper;
+    private final InvestmentRepository investmentRepository;
 
     @GetMapping
     public List<SipResponseDTO> getAllSips() {
         List<Sip> sips = sipService.getAllSips();
-        return sipMapper.toDTOList(sips);
+
+        // Batch-fetch all linked investments to enrich DTOs (avoids N+1 and returns live NAV/P&L)
+        List<Long> linkedIds = sips.stream()
+                .filter(s -> s.getInvestmentId() != null)
+                .map(Sip::getInvestmentId)
+                .toList();
+        Map<Long, Investment> linkedInvestments = investmentRepository.findAllById(linkedIds)
+                .stream()
+                .collect(Collectors.toMap(Investment::getId, i -> i));
+
+        return sipMapper.toDTOList(sips, linkedInvestments);
     }
 
     @GetMapping("/{id}")
     public SipResponseDTO getSipById(@PathVariable Long id) {
         Sip sip = sipService.getSipById(id);
-        return sipMapper.toDTO(sip);
+        Investment linkedInv = sip.getInvestmentId() != null
+                ? investmentRepository.findById(sip.getInvestmentId()).orElse(null)
+                : null;
+        return sipMapper.toDTO(sip, linkedInv);
     }
 
     @PostMapping

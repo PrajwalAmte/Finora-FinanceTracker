@@ -1,6 +1,8 @@
 package com.finance_tracker.service;
 
+import com.finance_tracker.model.Investment;
 import com.finance_tracker.model.Sip;
+import com.finance_tracker.repository.InvestmentRepository;
 import com.finance_tracker.repository.SipRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,7 @@ public class SipService {
     private static final Logger logger = LoggerFactory.getLogger(SipService.class);
 
     private final SipRepository sipRepository;
+    private final InvestmentRepository investmentRepository;
     private final LedgerService ledgerService;
     private final AmfiNavService amfiNavService;
 
@@ -91,21 +94,63 @@ public class SipService {
     }
 
     /**
-     * Current value of standalone SIPs only (investmentId == null).
-     * Linked SIPs are already counted via their backing Investment record.
+     * Total current value across ALL SIPs:
+     *  - Linked SIPs  → current value pulled from the backing Investment row (qty × currentPrice)
+     *  - Standalone SIPs → own NAV-based tracking (totalUnits × currentNav)
      */
     public BigDecimal getTotalSipValue() {
-        return getAllSips().stream()
+        List<Sip> sips = getAllSips();
+
+        BigDecimal standaloneValue = sips.stream()
                 .filter(sip -> sip.getInvestmentId() == null)
                 .map(Sip::getCurrentValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Long> linkedIds = sips.stream()
+                .filter(sip -> sip.getInvestmentId() != null)
+                .map(Sip::getInvestmentId)
+                .toList();
+        BigDecimal linkedValue = investmentRepository.findAllById(linkedIds).stream()
+                .map(Investment::getCurrentValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return standaloneValue.add(linkedValue);
     }
 
+    /**
+     * Total amount invested across ALL SIPs:
+     *  - Linked SIPs  → cost basis from the backing Investment (qty × avg buy price)
+     *  - Standalone SIPs → stored totalInvested field
+     */
     public BigDecimal getTotalSipInvestment() {
-        return getAllSips().stream()
+        List<Sip> sips = getAllSips();
+
+        BigDecimal standalone = sips.stream()
                 .filter(sip -> sip.getInvestmentId() == null)
                 .map(sip -> sip.getTotalInvested() != null ? sip.getTotalInvested() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Long> linkedIds = sips.stream()
+                .filter(sip -> sip.getInvestmentId() != null)
+                .map(Sip::getInvestmentId)
+                .toList();
+        BigDecimal linked = investmentRepository.findAllById(linkedIds).stream()
+                .map(inv -> inv.getQuantity().multiply(inv.getPurchasePrice())
+                        .setScale(2, RoundingMode.HALF_UP))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return standalone.add(linked);
+    }
+
+    /**
+     * Returns the investment IDs that are linked to the current user's SIPs.
+     * Used by Investment summary to exclude these from its totals (avoids double-counting).
+     */
+    public List<Long> getLinkedInvestmentIds() {
+        return getAllSips().stream()
+                .filter(sip -> sip.getInvestmentId() != null)
+                .map(Sip::getInvestmentId)
+                .toList();
     }
 
     @Transactional

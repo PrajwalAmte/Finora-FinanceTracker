@@ -38,8 +38,9 @@ public class FinanceSummaryFacade {
         LoanSummaryDTO loanSummary = getLoanSummary();
         SipSummaryDTO sipSummary = getSipSummary();
 
-        // investmentSummary.totalValue already includes linked MF investments (the ones SIPs track).
-        // sipSummary.totalCurrentValue only includes standalone SIPs (investmentId == null) to avoid double-counting.
+        // investmentSummary.totalValue = non-SIP investments only (SIP-linked MF rows are excluded).
+        // sipSummary.totalCurrentValue  = linked MF investment values + standalone SIP values.
+        // Together they cover all holdings exactly once.
         BigDecimal totalAssets = investmentSummary.getTotalValue()
                 .add(sipSummary.getTotalCurrentValue());
         BigDecimal totalLiabilities = loanSummary.getTotalBalance();
@@ -70,8 +71,10 @@ public class FinanceSummaryFacade {
     }
 
     public InvestmentSummaryDTO getInvestmentSummary() {
-        BigDecimal totalValue = investmentService.getTotalInvestmentValue();
-        BigDecimal totalProfitLoss = investmentService.getTotalProfitLoss();
+        // Exclude SIP-linked MF investments — their value is counted in sipSummary instead.
+        var sipLinkedIds    = sipService.getLinkedInvestmentIds();
+        BigDecimal totalValue      = investmentService.getTotalInvestmentValueExcluding(sipLinkedIds);
+        BigDecimal totalProfitLoss = investmentService.getTotalProfitLossExcluding(sipLinkedIds);
         
         return InvestmentSummaryDTO.builder()
                 .totalValue(totalValue)

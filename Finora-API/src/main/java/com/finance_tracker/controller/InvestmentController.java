@@ -67,8 +67,10 @@ public class InvestmentController {
 
     @GetMapping("/summary")
     public InvestmentSummaryDTO getInvestmentSummary() {
-        var totalValue = investmentService.getTotalInvestmentValue();
-        var totalProfitLoss = investmentService.getTotalProfitLoss();
+        // Exclude investments linked to SIPs — their value is shown on the SIP page instead.
+        var sipLinkedIds = sipService.getLinkedInvestmentIds();
+        var totalValue      = investmentService.getTotalInvestmentValueExcluding(sipLinkedIds);
+        var totalProfitLoss = investmentService.getTotalProfitLossExcluding(sipLinkedIds);
 
         return InvestmentSummaryDTO.builder()
                 .totalValue(totalValue)

@@ -118,6 +118,25 @@ public class InvestmentService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /**
+     * Total current value excluding investments whose IDs are in {@code excludeIds}.
+     * Used to exclude SIP-linked MF rows so they are not double-counted alongside SIP totals.
+     */
+    public BigDecimal getTotalInvestmentValueExcluding(List<Long> excludeIds) {
+        return getAllInvestments().stream()
+                .filter(inv -> inv.getId() == null || !excludeIds.contains(inv.getId()))
+                .map(Investment::getCurrentValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Same exclusion logic for P&L. */
+    public BigDecimal getTotalProfitLossExcluding(List<Long> excludeIds) {
+        return getAllInvestments().stream()
+                .filter(inv -> inv.getId() == null || !excludeIds.contains(inv.getId()))
+                .map(Investment::getProfitLoss)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     @Transactional
     public void updateCurrentPrices() {
         logger.info("Starting price update for all investments");
