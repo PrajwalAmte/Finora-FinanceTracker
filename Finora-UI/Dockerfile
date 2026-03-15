@@ -27,9 +27,11 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Store nginx config as a template
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Railway sets PORT env var; default to 80 for local
+ENV PORT=80
+EXPOSE ${PORT}
 
-# nginx:alpine's entrypoint auto-processes /etc/nginx/templates/*.template using envsubst
+# nginx:alpine entrypoint auto-runs envsubst on /etc/nginx/templates/*.template
 CMD ["nginx", "-g", "daemon off;"]
 
 # Health check
