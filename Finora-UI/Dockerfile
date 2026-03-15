@@ -21,17 +21,16 @@ RUN npm run build
 # Production stage with NGINX
 FROM nginx:alpine
 
-# Copy built assets from build stage
+# envsubst is included in nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy custom NGINX configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Store nginx config as a template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Expose port (Railway sets PORT env var)
 EXPOSE 80
 
-# Start NGINX - it will use PORT env var from Railway
-CMD ["sh", "-c", "nginx -g 'daemon off; events { worker_connections 256; }'"]
+# nginx:alpine's entrypoint auto-processes /etc/nginx/templates/*.template using envsubst
+CMD ["nginx", "-g", "daemon off;"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
