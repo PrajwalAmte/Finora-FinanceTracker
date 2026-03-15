@@ -1,6 +1,5 @@
 import { format, parseISO } from 'date-fns';
 
-// Format currency with provided locale and currency symbol
 export const formatCurrency = (amount: number | string, locale = 'en-IN', currency = 'INR'): string => {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
   
@@ -16,7 +15,6 @@ export const formatCurrency = (amount: number | string, locale = 'en-IN', curren
   }).format(numAmount);
 };
 
-// Format percentage (e.g., 0.156 to "15.60%")
 export const formatPercentage = (value: number | string, decimalPlaces = 2): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   
@@ -27,7 +25,6 @@ export const formatPercentage = (value: number | string, decimalPlaces = 2): str
   return `${(numValue).toFixed(decimalPlaces)}%`;
 };
 
-// Format date from ISO string (e.g., "2023-05-15")
 export const formatDate = (
   dateString: string | undefined | null, 
   dateFormat = 'MMM dd, yyyy'
@@ -36,13 +33,11 @@ export const formatDate = (
   
   try {
     return format(parseISO(dateString), dateFormat);
-  } catch (error) {
-    console.error('Error formatting date:', error);
+  } catch {
     return '---';
   }
 };
 
-// Format large numbers with K, M, B suffixes (e.g., 1500 to "1.5K")
 export const formatNumber = (number: number | string, maximumFractionDigits = 1): string => {
   const num = typeof number === 'string' ? parseFloat(number) : number;
   
@@ -67,7 +62,6 @@ export const formatNumber = (number: number | string, maximumFractionDigits = 1)
   return num.toFixed(maximumFractionDigits);
 };
 
-// Get status color based on positive/negative value
 export const getStatusColorClass = (value: number): string => {
   if (value > 0) {
     return 'text-success-600';
@@ -77,7 +71,6 @@ export const getStatusColorClass = (value: number): string => {
   return 'text-neutral-500';
 };
 
-// Get background color class based on positive/negative value
 export const getStatusBgClass = (value: number): string => {
   if (value > 0) {
     return 'bg-success-50 text-success-600';

@@ -1,5 +1,6 @@
 package com.finance_tracker.model;
 
+import com.finance_tracker.utils.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class Expense {
     private Long id;
 
     @NotBlank
+    @Convert(converter = EncryptedStringConverter.class)
     private String description;
 
     @Digits(integer = 17, fraction = 2)

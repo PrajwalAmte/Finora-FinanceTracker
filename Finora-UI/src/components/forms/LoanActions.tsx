@@ -26,8 +26,8 @@ export const LoanActions: React.FC<LoanActionsProps> = ({
       const updatedLoan = await loanApi.update(loan.id, data);
       onUpdate(updatedLoan);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Failed to update loan:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsLoading(false);
     }
@@ -40,8 +40,8 @@ export const LoanActions: React.FC<LoanActionsProps> = ({
       setIsLoading(true);
       await loanApi.delete(loan.id);
       onDelete(loan.id);
-    } catch (error) {
-      console.error('Failed to delete loan:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsLoading(false);
     }

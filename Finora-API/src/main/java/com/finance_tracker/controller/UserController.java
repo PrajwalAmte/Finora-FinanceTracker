@@ -1,9 +1,9 @@
 package com.finance_tracker.controller;
 
-import com.finance_tracker.dto.ApiResponse;
-import com.finance_tracker.dto.UserResponseDTO;
+import com.finance_tracker.dto.*;
 import com.finance_tracker.model.Role;
 import com.finance_tracker.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,9 +20,7 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponseDTO>> getCurrentUser() {
-        // JWT subject is now the user's numeric ID (as a string)
-        String subject = SecurityContextHolder.getContext().getAuthentication().getName();
-        Long userId = Long.parseLong(subject);
+        Long userId = getCurrentUserId();
         return ResponseEntity.ok(ApiResponse.success(userService.getUserByUserId(userId)));
     }
 
@@ -54,5 +52,30 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.success("User deleted", null));
+    }
+
+    @GetMapping("/vault/status")
+    public ResponseEntity<ApiResponse<VaultStatusDTO>> getVaultStatus() {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(userService.getVaultStatus(userId)));
+    }
+
+    @PostMapping("/vault/enable")
+    public ResponseEntity<ApiResponse<VaultStatusDTO>> enableVault(
+            @Valid @RequestBody VaultEnableRequestDTO request) {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(userService.enableVault(userId, request)));
+    }
+
+    @PostMapping("/vault/disable")
+    public ResponseEntity<ApiResponse<VaultStatusDTO>> disableVault(
+            @Valid @RequestBody VaultDisableRequestDTO request) {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(userService.disableVault(userId, request)));
+    }
+
+    private Long getCurrentUserId() {
+        String subject = SecurityContextHolder.getContext().getAuthentication().getName();
+        return Long.parseLong(subject);
     }
 }

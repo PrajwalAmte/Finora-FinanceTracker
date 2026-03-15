@@ -29,7 +29,6 @@ public class SipController {
     public List<SipResponseDTO> getAllSips() {
         List<Sip> sips = sipService.getAllSips();
 
-        // Batch-fetch all linked investments to enrich DTOs (avoids N+1 and returns live NAV/P&L)
         List<Long> linkedIds = sips.stream()
                 .filter(s -> s.getInvestmentId() != null)
                 .map(Sip::getInvestmentId)
@@ -59,7 +58,6 @@ public class SipController {
 
     @PutMapping("/{id}")
     public SipResponseDTO updateSip(@PathVariable Long id, @Valid @RequestBody SipRequestDTO sipDTO) {
-        // Verify sip exists
         sipService.getSipById(id);
         
         Sip sip = sipMapper.toEntity(sipDTO);
@@ -87,7 +85,6 @@ public class SipController {
                 .build();
     }
 
-    /** Records a manual monthly installment payment for a SIP. */
     @PostMapping("/{id}/pay")
     public SipResponseDTO recordPayment(@PathVariable Long id) {
         return sipMapper.toDTO(sipService.recordPayment(id));

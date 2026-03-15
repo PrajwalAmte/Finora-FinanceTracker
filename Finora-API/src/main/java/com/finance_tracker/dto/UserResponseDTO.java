@@ -22,4 +22,7 @@ public class UserResponseDTO {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
     private OffsetDateTime lastLoginAt;
+
+    private boolean vaultEnabled;
+    private String vaultSalt;
 }

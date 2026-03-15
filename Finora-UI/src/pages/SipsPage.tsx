@@ -39,27 +39,23 @@ export const SipsPage: React.FC = () => {
       ]);
       setSips(sipsData);
       setSummary(summaryData);
-    } catch (error) {
-      console.error('Failed to load SIPs:', error);
+    } catch {
       toast.error('Failed to load SIPs');
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Filter SIPs based on search term
+
   const filteredSips = sips.filter(sip => 
     sip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (sip.schemeCode ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
-  // Calculate return percentage
+
   const calculateReturnPercentage = (invested: number, currentValue: number): number => {
     if (invested === 0) return 0;
     return ((currentValue - invested) / invested) * 100;
   };
-  
-  // Group SIPs by invested amount for chart
+
   const getSipData = () => {
     return filteredSips.map(sip => ({
       name: sip.name,
@@ -73,8 +69,8 @@ export const SipsPage: React.FC = () => {
       const newSip = await sipApi.create(data);
       setSips(prev => [...prev, newSip]);
       setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to add SIP:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +101,6 @@ export const SipsPage: React.FC = () => {
     }
   };
 
-  // Handle export to Excel
   const handleExportExcel = () => {
     generateSipReport(
       filteredSips,
@@ -116,9 +111,6 @@ export const SipsPage: React.FC = () => {
     );
   };
 
-  // Returns true when the next installment date is today or within the next 3 days
-  // (or is already overdue). startDate is stored as the UPCOMING installment date;
-  // recordPayment() advances it by +1 month after each payment.
   const isPaymentDue = (sip: Sip): boolean => {
     if (!sip.startDate) return false;
     const nextDate = new Date(sip.startDate);
@@ -126,7 +118,6 @@ export const SipsPage: React.FC = () => {
     today.setHours(0, 0, 0, 0);
     nextDate.setHours(0, 0, 0, 0);
     const diffDays = (nextDate.getTime() - today.getTime()) / 86_400_000;
-    // Due if overdue (past) or coming up within 3 days
     return diffDays <= 3;
   };
 
@@ -136,12 +127,10 @@ export const SipsPage: React.FC = () => {
       setPayingId(sip.id);
       const updated = await sipApi.pay(sip.id);
       setSips(prev => prev.map(s => s.id === updated.id ? updated : s));
-      // Refresh summary
       const summaryData = await sipApi.getSummary();
       setSummary(summaryData);
       toast.success(`Payment recorded for ${sip.name}`);
-    } catch (error) {
-      console.error('Failed to record payment:', error);
+    } catch {
       toast.error('Failed to record payment');
     } finally {
       setPayingId(null);

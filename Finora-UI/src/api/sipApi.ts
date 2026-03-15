@@ -5,82 +5,40 @@ const BASE_PATH = '/sips';
 
 export const sipApi = {
   getAll: async (): Promise<Sip[]> => {
-    try {
-      const response = await apiClient.get(BASE_PATH);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch SIPs:', error);
-      throw error;
-    }
+    const response = await apiClient.get(BASE_PATH);
+    return response.data;
   },
 
   getById: async (id: number): Promise<Sip> => {
-    try {
-      const response = await apiClient.get(`${BASE_PATH}/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to fetch SIP with ID ${id}:`, error);
-      throw error;
-    }
+    const response = await apiClient.get(`${BASE_PATH}/${id}`);
+    return response.data;
   },
 
   create: async (sip: Omit<Sip, 'id'>): Promise<Sip> => {
-    try {
-      const response = await apiClient.post(BASE_PATH, sip);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to create SIP:', error);
-      throw error;
-    }
+    const response = await apiClient.post(BASE_PATH, sip);
+    return response.data;
   },
 
   update: async (id: number, sip: Partial<Sip>): Promise<Sip> => {
-    try {
-      const response = await apiClient.put(`${BASE_PATH}/${id}`, sip);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to update SIP with ID ${id}:`, error);
-      throw error;
-    }
+    const response = await apiClient.put(`${BASE_PATH}/${id}`, sip);
+    return response.data;
   },
 
   delete: async (id: number): Promise<void> => {
-    try {
-      await apiClient.delete(`${BASE_PATH}/${id}`);
-    } catch (error) {
-      console.error(`Failed to delete SIP with ID ${id}:`, error);
-      throw error;
-    }
+    await apiClient.delete(`${BASE_PATH}/${id}`);
   },
 
   getSummary: async (): Promise<SipSummary> => {
-    try {
-      const response = await apiClient.get(`${BASE_PATH}/summary`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch SIP summary:', error);
-      throw error;
-    }
+    const response = await apiClient.get(`${BASE_PATH}/summary`);
+    return response.data;
   },
 
-  /** Records the current month's installment payment for a SIP. */
   pay: async (id: number): Promise<Sip> => {
-    try {
-      const response = await apiClient.post(`${BASE_PATH}/${id}/pay`);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to record payment for SIP ${id}:`, error);
-      throw error;
-    }
+    const response = await apiClient.post(`${BASE_PATH}/${id}/pay`);
+    return response.data;
   },
 
-  /** Triggers an immediate NAV refresh for all investments and SIPs. */
   refreshNavs: async (): Promise<void> => {
-    try {
-      await apiClient.post('/investments/refresh-prices');
-    } catch (error) {
-      console.error('Failed to refresh NAVs:', error);
-      throw error;
-    }
+    await apiClient.post('/investments/refresh-prices');
   },
 };

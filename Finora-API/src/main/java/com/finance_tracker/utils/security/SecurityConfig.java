@@ -18,12 +18,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final VaultKeyFilter vaultKeyFilter;
 
     @Value("${cors.allowed.origins:http://localhost,http://localhost:5173}")
     private String allowedOriginsRaw;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, VaultKeyFilter vaultKeyFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.vaultKeyFilter = vaultKeyFilter;
     }
 
     @Bean
@@ -38,7 +40,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(vaultKeyFilter, JwtAuthFilter.class);
 
         return http.build();
     }

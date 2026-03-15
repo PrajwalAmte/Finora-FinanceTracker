@@ -33,7 +33,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             
             try {
-                // Validate token before extracting username
                 if (jwtService.isTokenValid(token)) {
                     String username = jwtService.extractUsername(token);
 

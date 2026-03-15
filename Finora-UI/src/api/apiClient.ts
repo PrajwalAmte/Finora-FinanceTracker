@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { toast } from "../utils/notifications";
-import { TOKEN_KEY } from "../utils/auth-context";
+import { TOKEN_KEY, VAULT_KEY_STORAGE } from "../utils/auth-context";
 
 const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || "http://localhost:8082";
 const API_BASE_URL = `${BACKEND_URL}/api`;
@@ -19,6 +19,13 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Inject vault key if present (stored in sessionStorage for security)
+    const vaultKey = sessionStorage.getItem(VAULT_KEY_STORAGE);
+    if (vaultKey) {
+      config.headers['X-Vault-Key'] = vaultKey;
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)

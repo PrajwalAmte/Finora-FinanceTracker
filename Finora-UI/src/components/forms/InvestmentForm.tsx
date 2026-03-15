@@ -15,8 +15,6 @@ interface InvestmentFormProps {
   mode?: 'create' | 'edit';
 }
 
-// constants moved to shared constants.ts
-
 export const InvestmentForm: React.FC<InvestmentFormProps> = ({
   onSubmit,
   onCancel,
@@ -52,7 +50,6 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
         currentPrice: initialData.currentPrice.toString(),
         purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
       });
-      // Pre-fill fund search display with the fund name for edit mode
       if (initialData.type === 'MUTUAL_FUND') setFundQuery(initialData.name);
     } else {
       setFormData({
@@ -68,7 +65,6 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
     }
   }, [initialData]);
 
-  // Debounced MF fund search
   useEffect(() => {
     if (formData.type !== 'MUTUAL_FUND') return;
     if (fundQuery.trim().length < 2) { setFundResults([]); return; }

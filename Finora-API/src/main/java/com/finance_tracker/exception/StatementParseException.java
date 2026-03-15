@@ -2,7 +2,6 @@ package com.finance_tracker.exception;
 
 import java.util.List;
 
-/** Thrown when a statement file cannot be parsed. Maps to HTTP 422 via GlobalExceptionHandler. */
 public class StatementParseException extends RuntimeException {
 
     private final List<String> rowErrors;

@@ -21,12 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Fetches AMFI NAVAll.txt once per day and caches two maps:
- *   navsBySchemeCode: scheme code → NAV
- *   schemeCodeByIsin: ISIN → scheme code (indexes both growth and div-reinvestment ISINs)
- * Used by SipService (NAV updates) and StatementImportService (ISIN → scheme code lookup).
- */
 @Service
 public class AmfiNavService {
 
@@ -39,40 +33,28 @@ public class AmfiNavService {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
-    // Volatile so reads outside the synchronized block see the latest reference.
     private volatile Map<String, BigDecimal> navsBySchemeCode = new HashMap<>();
     private volatile Map<String, String> schemeCodeByIsin = new HashMap<>();
     private volatile Map<String, String> schemeNameByCode = new HashMap<>();
     private volatile LocalDate cacheDate = null;
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
-    /** Returns all NAVs by scheme code; refreshes cache if stale. */
     public Map<String, BigDecimal> getAllNavs() {
         refreshIfStale();
         return Collections.unmodifiableMap(navsBySchemeCode);
     }
 
-    /** Returns the NAV for a single scheme code; empty if unknown. */
     public Optional<BigDecimal> getNavBySchemeCode(String schemeCode) {
         if (schemeCode == null || schemeCode.isBlank()) return Optional.empty();
         refreshIfStale();
         return Optional.ofNullable(navsBySchemeCode.get(schemeCode.trim()));
     }
 
-    /** Looks up AMFI scheme code by ISIN (indexes both growth and div-reinvestment ISINs). */
     public Optional<String> lookupSchemeCodeByIsin(String isin) {
         if (isin == null || isin.isBlank()) return Optional.empty();
         refreshIfStale();
         return Optional.ofNullable(schemeCodeByIsin.get(isin.trim().toUpperCase()));
     }
 
-    /**
-     * Searches AMFI scheme names by keyword (case-insensitive substring match).
-     * Returns up to 15 results sorted by name, each containing schemeCode, name, nav.
-     */
     public List<Map<String, Object>> searchByName(String query) {
         if (query == null || query.trim().length() < 2) return List.of();
         refreshIfStale();
@@ -92,22 +74,15 @@ public class AmfiNavService {
         return results.size() > 15 ? results.subList(0, 15) : results;
     }
 
-    /** Force-refreshes the cache; called by the scheduler before a NAV-update run. */
     public synchronized void forceRefresh() {
         fetchAndCache();
     }
 
-    // -------------------------------------------------------------------------
-    // Cache management
-    // -------------------------------------------------------------------------
-
     private void refreshIfStale() {
-        // Fast path: cache is fresh — no locking needed.
         if (cacheDate != null && cacheDate.equals(LocalDate.now()) && !navsBySchemeCode.isEmpty()) {
             return;
         }
         synchronized (this) {
-            // Re-check inside the lock (another thread may have refreshed already).
             if (cacheDate != null && cacheDate.equals(LocalDate.now()) && !navsBySchemeCode.isEmpty()) {
                 return;
             }
@@ -165,7 +140,6 @@ public class AmfiNavService {
                 }
             }
 
-            // Atomic swap — all maps updated together.
             navsBySchemeCode = navs;
             schemeCodeByIsin = isinMap;
             schemeNameByCode = nameMap;

@@ -14,8 +14,6 @@ interface ExpenseFormProps {
   mode?: 'create' | 'edit';
 }
 
-// constants moved to shared constants.ts
-
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onSubmit,
   onCancel,
@@ -27,8 +25,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
-    category: EXPENSE_CATEGORIES[0] || '', // Default to first category (Food)
-    paymentMethod: PAYMENT_METHODS[0] || '', // Default to first payment method (Cash)
+    category: EXPENSE_CATEGORIES[0] || '',
+    paymentMethod: PAYMENT_METHODS[0] || '',
   });
 
   useEffect(() => {
@@ -41,7 +39,6 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
         paymentMethod: initialData.paymentMethod,
       });
     } else {
-      // Reset form to defaults when no initial data (for create mode)
       setFormData({
         description: '',
         amount: '',

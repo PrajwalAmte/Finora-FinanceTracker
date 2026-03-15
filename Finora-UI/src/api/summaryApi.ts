@@ -27,14 +27,9 @@ const BASE_PATH = '/finance-summary';
 
 export const summaryApi = {
   getComprehensiveSummary: async (startDate?: string, endDate?: string): Promise<ComprehensiveFinanceSummary> => {
-    try {
-      const response = await apiClient.get(BASE_PATH, {
-        params: { startDate, endDate },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch comprehensive finance summary:', error);
-      throw error;
-    }
+    const response = await apiClient.get(BASE_PATH, {
+      params: { startDate, endDate },
+    });
+    return response.data;
   }
 };

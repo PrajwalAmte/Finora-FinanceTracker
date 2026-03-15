@@ -14,8 +14,6 @@ interface LoanFormProps {
   mode?: 'create' | 'edit';
 }
 
-// constants moved to shared constants.ts
-
 export const LoanForm: React.FC<LoanFormProps> = ({
   onSubmit,
   onCancel,
@@ -47,7 +45,6 @@ export const LoanForm: React.FC<LoanFormProps> = ({
         currentBalance: initialData.currentBalance.toString(),
       });
     } else {
-      // Reset form to defaults when no initial data (for create mode)
       setFormData({
         name: '',
         principalAmount: '',

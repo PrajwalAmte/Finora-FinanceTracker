@@ -19,27 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/**
- * Orchestrates backup export and import operations.
- *
- * <h3>Export flow:</h3>
- * <ol>
- *   <li>Snapshot all user-owned tables (expenses, investments, loans, SIPs)</li>
- *   <li>Snapshot all user's ledger events (ordered by sequence)</li>
- *   <li>Compute the ledger root hash (hash of the last event in the chain)</li>
- *   <li>Build metadata with counts and timestamp</li>
- *   <li>Serialize to JSON and encrypt with user-supplied password</li>
- * </ol>
- *
- * <h3>Import flow:</h3>
- * <ol>
- *   <li>Decrypt the uploaded file with the user-supplied password</li>
- *   <li>Deserialize the JSON payload</li>
- *   <li>Validate the backup belongs to the requesting user</li>
- *   <li>Verify the embedded ledger chain integrity</li>
- *   <li>Clear existing user data and replace with backup data</li>
- * </ol>
- */
 @Service
 @RequiredArgsConstructor
 public class BackupService {
@@ -58,13 +37,6 @@ public class BackupService {
 
     private final ObjectMapper backupMapper = createBackupMapper();
 
-    /**
-     * Exports all data for the authenticated user as an encrypted byte array.
-     *
-     * @param userId   the authenticated user's ID
-     * @param password the encryption password chosen by the user
-     * @return encrypted backup bytes (ready to be sent as a file download)
-     */
     @Transactional(readOnly = true)
     public byte[] exportBackup(Long userId, String password) {
         logger.info("Starting backup export for user {}", userId);
@@ -125,14 +97,6 @@ public class BackupService {
         }
     }
 
-    /**
-     * Imports an encrypted backup file, replacing all existing user data.
-     *
-     * @param userId        the authenticated user's ID
-     * @param encryptedData the encrypted backup bytes uploaded by the user
-     * @param password      the decryption password
-     * @return metadata of the imported backup
-     */
     @Transactional
     public BackupMetadataDTO importBackup(Long userId, byte[] encryptedData, String password) {
         logger.info("Starting backup import for user {}", userId);
@@ -208,11 +172,6 @@ public class BackupService {
         return metadata;
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────
-
-    /**
-     * Verifies the hash chain in the backup's ledger events matches the metadata root hash.
-     */
     private void verifyBackupLedgerIntegrity(BackupPayloadDTO payload) {
         List<LedgerEvent> events = payload.getLedgerEvents();
         if (events == null || events.isEmpty()) {

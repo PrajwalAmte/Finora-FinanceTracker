@@ -6,7 +6,6 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Response for POST /api/statements/preview — parsed holdings + warnings + statement date. */
 @Data
 @Builder
 public class StatementPreviewDTO {

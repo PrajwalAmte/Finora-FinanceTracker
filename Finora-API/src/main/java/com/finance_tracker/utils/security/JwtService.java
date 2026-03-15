@@ -32,9 +32,7 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken() {
-        return generateTokenForSubject("local-user");
-    }
+
 
     public String generateToken(Long userId) {
         return generateTokenForSubject(userId.toString());
@@ -44,7 +42,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000)))
+                .setExpiration(new Date(System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000)))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -89,7 +89,7 @@ public class ExpenseController {
         }
 
         if (endDate == null) {
-            endDate = LocalDate.now(); // Today
+            endDate = LocalDate.now();
         }
 
         BigDecimal totalExpenses = expenseService.getTotalExpenses(startDate, endDate);

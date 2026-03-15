@@ -40,23 +40,20 @@ export const InvestmentsPage: React.FC = () => {
       ]);
       setInvestments(investmentsData);
       setSummary(summaryData);
-    } catch (error) {
-      console.error('Failed to load investments:', error);
+    } catch {
       setError('Failed to load investments');
       toast.error('Failed to load investments');
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Filter investments based on search term
+
   const filteredInvestments = investments.filter(investment => 
     investment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     investment.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
     investment.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
-  // Group investments by type for the pie chart
+
   const getInvestmentsByType = () => {
     const groupedData: Record<string, number> = {};
     
@@ -83,8 +80,7 @@ export const InvestmentsPage: React.FC = () => {
       const newInvestment = await investmentApi.create(data);
       setInvestments(prev => [...prev, newInvestment]);
       setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to add investment:', error);
+    } catch {
       toast.error('Failed to add investment');
     } finally {
       setIsSubmitting(false);
@@ -117,7 +113,6 @@ export const InvestmentsPage: React.FC = () => {
     }
   };
 
-  // Handle export to Excel
   const handleExportExcel = () => {
     generateInvestmentReport(
       filteredInvestments,

@@ -41,7 +41,6 @@ public class LoanController {
 
     @PutMapping("/{id}")
     public LoanResponseDTO updateLoan(@PathVariable Long id, @Valid @RequestBody LoanRequestDTO loanDTO) {
-        // Verify loan exists
         loanService.getLoanById(id);
         
         Loan loan = loanMapper.toEntity(loanDTO);

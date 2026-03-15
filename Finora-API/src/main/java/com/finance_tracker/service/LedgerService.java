@@ -4,6 +4,7 @@ import com.finance_tracker.dto.LedgerIntegrityResultDTO;
 import com.finance_tracker.model.LedgerEvent;
 import com.finance_tracker.repository.LedgerEventRepository;
 import com.finance_tracker.utils.HashingUtils;
+import com.finance_tracker.utils.security.VaultKeyContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class LedgerService {
 
     private final LedgerEventRepository ledgerEventRepository;
     private final HashingUtils hashingUtils;
+    private final FieldEncryptionService encryptionService;
 
     @Transactional
     public LedgerEvent recordEvent(
@@ -31,6 +33,11 @@ public class LedgerService {
         String beforeJson = hashingUtils.toCanonicalJson(before);
         String afterJson = hashingUtils.toCanonicalJson(after);
 
+        // Encrypt the JSON blobs before storing (uses vault key if present)
+        String vaultKey = VaultKeyContext.get();
+        String encryptedBefore = before == null ? null : encryptionService.encrypt(beforeJson, vaultKey);
+        String encryptedAfter = after == null ? null : encryptionService.encrypt(afterJson, vaultKey);
+
         String prevHash = ledgerEventRepository
                 .findTopByUserIdOrderByEventSequenceDesc(userId)
                 .map(LedgerEvent::getHash)
@@ -40,12 +47,13 @@ public class LedgerService {
 
         int eventVersion = 1;
 
+        // Hash is computed over encrypted data — chain integrity preserved
         String hash = hashingUtils.computeHash(
                 entityType,
                 entityId,
                 actionType,
-                beforeJson,
-                afterJson,
+                encryptedBefore != null ? encryptedBefore : "null",
+                encryptedAfter != null ? encryptedAfter : "null",
                 eventTimestamp.toString(),
                 prevHash,
                 userId,
@@ -58,8 +66,8 @@ public class LedgerService {
         event.setEntityType(entityType);
         event.setEntityId(entityId);
         event.setActionType(actionType);
-        event.setBeforeState(before == null ? null : beforeJson);
-        event.setAfterState(after == null ? null : afterJson);
+        event.setBeforeState(encryptedBefore);
+        event.setAfterState(encryptedAfter);
         event.setEventTimestamp(eventTimestamp);
         event.setPrevHash(prevHash);
         event.setHash(hash);

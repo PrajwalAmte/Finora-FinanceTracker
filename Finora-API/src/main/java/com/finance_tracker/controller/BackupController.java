@@ -16,30 +16,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * REST endpoints for encrypted backup export and import.
- *
- * <ul>
- *   <li>{@code POST /api/backup/export} — Download an encrypted backup of all user data</li>
- *   <li>{@code POST /api/backup/import} — Upload and restore from an encrypted backup file</li>
- * </ul>
- */
 @RestController
 @RequestMapping("/api/backup")
 @RequiredArgsConstructor
 public class BackupController {
 
     private static final String BACKUP_CONTENT_TYPE = "application/octet-stream";
-    private static final long MAX_BACKUP_SIZE = 50 * 1024 * 1024; // 50 MB
+    private static final long MAX_BACKUP_SIZE = 50 * 1024 * 1024;
 
     private final BackupService backupService;
 
-    /**
-     * Exports all user data as an AES-256-GCM encrypted binary file.
-     *
-     * @param request contains the encryption password
-     * @return encrypted backup file as a binary download
-     */
     @PostMapping("/export")
     public ResponseEntity<byte[]> exportBackup(@Valid @RequestBody BackupExportRequestDTO request) {
         Long userId = getAuthenticatedUserId();
@@ -57,13 +43,6 @@ public class BackupController {
                 .body(encryptedBackup);
     }
 
-    /**
-     * Imports user data from an encrypted backup file, replacing all existing data.
-     *
-     * @param file     the encrypted backup file
-     * @param password the decryption password
-     * @return metadata of the imported backup
-     */
     @PostMapping("/import")
     public ResponseEntity<ApiResponse<BackupMetadataDTO>> importBackup(
             @RequestParam("file") MultipartFile file,

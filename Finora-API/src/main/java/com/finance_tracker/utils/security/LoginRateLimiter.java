@@ -1,6 +1,7 @@
 package com.finance_tracker.utils.security;
 
 import com.finance_tracker.exception.BusinessLogicException;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -13,6 +14,7 @@ public class LoginRateLimiter {
 
     private static final int MAX_ATTEMPTS = 5;
     private static final long WINDOW_MILLIS = 60_000;
+    private static final long CLEANUP_INTERVAL_MILLIS = 300_000;
 
     private final ConcurrentHashMap<String, List<Instant>> attempts = new ConcurrentHashMap<>();
 
@@ -21,22 +23,24 @@ public class LoginRateLimiter {
         long windowStart = now.toEpochMilli() - WINDOW_MILLIS;
 
         attempts.compute(ip, (key, timestamps) -> {
-            if (timestamps == null) {
-                timestamps = new ArrayList<>();
-            }
+            if (timestamps == null) timestamps = new ArrayList<>();
             timestamps.removeIf(t -> t.toEpochMilli() < windowStart);
             timestamps.add(now);
             return timestamps;
         });
 
-        int count = attempts.get(ip).size();
-        if (count > MAX_ATTEMPTS) {
-            throw new BusinessLogicException(
-                "Too many login attempts. Please try again in a minute.");
+        if (attempts.get(ip).size() > MAX_ATTEMPTS) {
+            throw new BusinessLogicException("Too many login attempts. Please try again in a minute.");
         }
     }
 
     public void clearAttempts(String ip) {
         attempts.remove(ip);
+    }
+
+    @Scheduled(fixedRate = CLEANUP_INTERVAL_MILLIS)
+    public void cleanupStaleEntries() {
+        long cutoff = Instant.now().toEpochMilli() - WINDOW_MILLIS;
+        attempts.entrySet().removeIf(e -> e.getValue().stream().allMatch(t -> t.toEpochMilli() < cutoff));
     }
 }

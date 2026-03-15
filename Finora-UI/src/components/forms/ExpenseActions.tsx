@@ -26,8 +26,8 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
       const updatedExpense = await expenseApi.update(expense.id, data);
       onUpdate(updatedExpense);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Failed to update expense:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsLoading(false);
     }
@@ -40,8 +40,8 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
       setIsLoading(true);
       await expenseApi.delete(expense.id);
       onDelete(expense.id);
-    } catch (error) {
-      console.error('Failed to delete expense:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsLoading(false);
     }

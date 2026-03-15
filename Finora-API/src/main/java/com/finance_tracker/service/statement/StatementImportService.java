@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/** Two-step statement import: preview (parse + DB status enrichment) → confirm (transactional save). */
 @Service
 @RequiredArgsConstructor
 public class StatementImportService {
@@ -43,7 +42,6 @@ public class StatementImportService {
     private final InvestmentService     investmentService;
     private final AmfiNavService        amfiNavService;
 
-    /** Parses the file and enriches each holding with its DB-resolved ImportStatus. Read-only. */
     public StatementPreviewDTO preview(MultipartFile file,
                                         String statementType,
                                         String password,
@@ -79,7 +77,6 @@ public class StatementImportService {
                 .build();
     }
 
-    /** Imports user-selected ISINs into the DB; re-resolves status inside the transaction (TOCTOU guard). */
     @Transactional
     public StatementImportResultDTO confirmImport(StatementConfirmRequest request, Long userId) {
 
@@ -135,12 +132,10 @@ public class StatementImportService {
                                        Long userId, Map<String, String> skippedReasons) {
         String key = h.getIsin() != null ? h.getIsin() : h.getSymbol();
 
-        // Re-resolve status inside transaction (TOCTOU guard)
         Optional<Investment> existing;
         if (h.getIsin() != null) {
             existing = investmentRepository.findByUserIdAndIsin(userId, h.getIsin());
         } else {
-            // Symbol-only import (CSV without ISIN) — dedup by symbol
             existing = h.getSymbol() != null
                     ? investmentRepository.findFirstByUserIdAndSymbol(userId, h.getSymbol())
                     : Optional.empty();
@@ -149,13 +144,11 @@ public class StatementImportService {
         if (existing.isPresent()) {
             Investment inv = existing.get();
             if (inv.getImportSource() == null) {
-                // Manual record — sacred, never overwrite.
                 skippedReasons.put(key,
                         "Manual entry — will not be overwritten by statement import. "
                                 + "Edit the record directly if you want to update it.");
                 return ImportOutcome.SKIP;
             }
-            // Existing imported record — update in place.
             return updateInvestment(inv, h.getQuantity(), h.getAvgCost(), h.getLtp(), userId);
         }
 

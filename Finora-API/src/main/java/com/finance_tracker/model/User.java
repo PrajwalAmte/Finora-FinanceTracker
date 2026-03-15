@@ -1,5 +1,6 @@
 package com.finance_tracker.model;
 
+import com.finance_tracker.utils.converter.DeterministicEncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -24,7 +25,8 @@ public class User {
 
     @NotBlank
     @Email
-    @Column(nullable = false, unique = true, length = 255)
+    @Convert(converter = DeterministicEncryptedStringConverter.class)
+    @Column(nullable = false, unique = true, length = 500)
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 500)
@@ -45,6 +47,12 @@ public class User {
 
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;
+
+    @Column(name = "vault_enabled", nullable = false)
+    private boolean vaultEnabled = false;
+
+    @Column(name = "vault_salt", length = 64)
+    private String vaultSalt;
 
     @PrePersist
     protected void onCreate() {

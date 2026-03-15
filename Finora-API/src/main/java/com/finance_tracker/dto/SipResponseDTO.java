@@ -27,10 +27,8 @@ public class SipResponseDTO {
     private Integer completedInstallments;
     private BigDecimal totalInvested;
     private BigDecimal profitLoss;
-    /** NULL = manual entry; non-null = CAS / CAMS */
     private String isin;
     private String importSource;
-    /** Non-null when this SIP is backed by a linked Investment record. */
     private Long investmentId;
 }
 

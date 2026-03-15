@@ -12,22 +12,18 @@ export const generateExpenseReport = (
   endDate?: string,
   totalAmount?: number
 ): void => {
-  // Create workbook
   const wb = XLSX.utils.book_new();
   
-  // Calculate total if not provided
   const calculatedTotal = totalAmount ?? expenses.reduce((sum, expense) => sum + expense.amount, 0);
   
-  // Prepare data
   const data = expenses.map(expense => ({
     Date: formatDate(expense.date, 'MM/dd/yyyy'),
     Description: expense.description,
     Category: expense.category,
     'Payment Method': expense.paymentMethod,
-    Amount: formatCurrency(expense.amount) // Format currency in the data itself
+    Amount: formatCurrency(expense.amount)
   }));
 
-  // Add summary row at the end (more conventional for reports)
   data.push({
     Date: 'TOTAL',
     Description: '',
@@ -36,20 +32,17 @@ export const generateExpenseReport = (
     Amount: formatCurrency(calculatedTotal)
   });
 
-  // Create worksheet
   const ws = XLSX.utils.json_to_sheet(data);
 
-  // Set column widths
   const colWidths = [
-    { wch: 12 }, // Date
-    { wch: 30 }, // Description
-    { wch: 15 }, // Category
-    { wch: 15 }, // Payment Method
-    { wch: 15 }  // Amount
+    { wch: 12 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 }
   ];
   ws['!cols'] = colWidths;
 
-  // Style the total row (make it bold)
   const totalRowIndex = data.length;
   const totalRowCells = ['A', 'B', 'C', 'D', 'E'].map(col => `${col}${totalRowIndex}`);
   totalRowCells.forEach(cell => {
@@ -57,10 +50,8 @@ export const generateExpenseReport = (
     ws[cell].s = { font: { bold: true } };
   });
 
-  // Add worksheet to workbook
   XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
 
-  // Save file with meaningful filename
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const periodStr = startDate && endDate ? `_${startDate.replace(/-/g, '')}-${endDate.replace(/-/g, '')}` : '';
   XLSX.writeFile(wb, `expenses-report-${dateStr}${periodStr}.xlsx`);
@@ -74,7 +65,6 @@ export const generateInvestmentReport = (
 ): void => {
   const wb = XLSX.utils.book_new();
   
-  // Calculate totals if not provided
   const calculatedTotalValue = totalValue ?? investments.reduce((sum, inv) => {
     const currentValue = inv.currentValue ?? (inv.quantity * inv.currentPrice);
     return sum + currentValue;
@@ -111,7 +101,6 @@ export const generateInvestmentReport = (
     };
   });
 
-  // Add totals row
   data.push({
     Name: 'TOTAL',
     Symbol: '',
@@ -128,20 +117,19 @@ export const generateInvestmentReport = (
   const ws = XLSX.utils.json_to_sheet(data);
   
   const colWidths = [
-    { wch: 20 }, // Name
-    { wch: 10 }, // Symbol
-    { wch: 15 }, // Type
-    { wch: 10 }, // Quantity
-    { wch: 15 }, // Purchase Price
-    { wch: 15 }, // Current Price
-    { wch: 12 }, // Purchase Date
-    { wch: 15 }, // Current Value
-    { wch: 15 }, // Profit/Loss
-    { wch: 12 }  // Return %
+    { wch: 20 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 }
   ];
   ws['!cols'] = colWidths;
 
-  // Style the total row
   const totalRowIndex = data.length;
   const totalRowCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].map(col => `${col}${totalRowIndex}`);
   totalRowCells.forEach(cell => {
@@ -162,14 +150,12 @@ export const generateLoanReport = (
 ): void => {
   const wb = XLSX.utils.book_new();
   
-  // Calculate total balance if not provided
   const calculatedTotalBalance = totalBalance ?? loans.reduce((sum, loan) => sum + loan.currentBalance, 0);
   const calculatedTotalPrincipal = loans.reduce((sum, loan) => sum + loan.principalAmount, 0);
   const calculatedTotalEMI = loans.reduce((sum, loan) => sum + (loan.emiAmount || 0), 0);
   const calculatedTotalInterest = loans.reduce((sum, loan) => sum + (loan.totalInterest || 0), 0);
   
   const data = loans.map(loan => {
-    // Calculate remaining months if not provided
     const remainingMonths = loan.remainingMonths ?? 
       (loan.emiAmount && loan.emiAmount > 0 ? Math.ceil(loan.currentBalance / loan.emiAmount) : 0);
 
@@ -187,7 +173,6 @@ export const generateLoanReport = (
     };
   });
 
-  // Add totals row - only show meaningful totals
   data.push({
     Name: 'TOTAL',
     Principal: formatCurrency(calculatedTotalPrincipal),
@@ -204,20 +189,19 @@ export const generateLoanReport = (
   const ws = XLSX.utils.json_to_sheet(data);
   
   const colWidths = [
-    { wch: 20 }, // Name
-    { wch: 15 }, // Principal
-    { wch: 12 }, // Interest Rate
-    { wch: 15 }, // Interest Type
-    { wch: 12 }, // Start Date
-    { wch: 15 }, // Tenure
-    { wch: 15 }, // EMI
-    { wch: 15 }, // Current Balance
-    { wch: 15 }, // Remaining Months
-    { wch: 15 }  // Total Interest
+    { wch: 20 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 }
   ];
   ws['!cols'] = colWidths;
 
-  // Style the total row
   const totalRowIndex = data.length;
   const totalRowCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].map(col => `${col}${totalRowIndex}`);
   totalRowCells.forEach(cell => {
@@ -240,7 +224,6 @@ export const generateSipReport = (
 ): void => {
   const wb = XLSX.utils.book_new();
   
-  // Calculate totals if not provided
   const calculatedTotalInvestment = totalInvestment ?? sips.reduce((sum, sip) => sum + (sip.totalInvested || 0), 0);
   const calculatedTotalCurrentValue = totalCurrentValue ?? sips.reduce((sum, sip) => sum + (sip.currentValue || 0), 0);
   const calculatedTotalProfitLoss = totalProfitLoss ?? sips.reduce((sum, sip) => sum + (sip.profitLoss || 0), 0);
@@ -248,7 +231,6 @@ export const generateSipReport = (
     (calculatedTotalProfitLoss / calculatedTotalInvestment) * 100 : 0;
   
   const data = sips.map(sip => {
-    // Calculate values if missing
     const totalInvested = sip.totalInvested ?? (sip.monthlyAmount * sip.durationMonths);
     const currentValue = sip.currentValue ?? (sip.totalUnits * sip.currentNav);
     const profitLoss = sip.profitLoss ?? (currentValue - totalInvested);
@@ -261,7 +243,7 @@ export const generateSipReport = (
       'Start Date': formatDate(sip.startDate),
       'Duration (Months)': sip.durationMonths,
       'Current NAV': formatCurrency(sip.currentNav),
-      'Total Units': sip.totalUnits.toFixed(3), // Format units with 3 decimal places
+      'Total Units': sip.totalUnits.toFixed(3),
       'Total Invested': formatCurrency(totalInvested),
       'Current Value': formatCurrency(currentValue),
       'Profit/Loss': formatCurrency(profitLoss),
@@ -269,7 +251,6 @@ export const generateSipReport = (
     };
   });
 
-  // Add totals row - only show meaningful totals
   data.push({
     Name: 'TOTAL',
     'Scheme Code': '',
@@ -287,21 +268,20 @@ export const generateSipReport = (
   const ws = XLSX.utils.json_to_sheet(data);
   
   const colWidths = [
-    { wch: 20 }, // Name
-    { wch: 15 }, // Scheme Code
-    { wch: 15 }, // Monthly Amount
-    { wch: 12 }, // Start Date
-    { wch: 15 }, // Duration
-    { wch: 15 }, // Current NAV
-    { wch: 12 }, // Total Units
-    { wch: 15 }, // Total Invested
-    { wch: 15 }, // Current Value
-    { wch: 15 }, // Profit/Loss
-    { wch: 12 }  // Return %
+    { wch: 20 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 }
   ];
   ws['!cols'] = colWidths;
 
-  // Style the total row
   const totalRowIndex = data.length;
   const totalRowCells = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'].map(col => `${col}${totalRowIndex}`);
   totalRowCells.forEach(cell => {

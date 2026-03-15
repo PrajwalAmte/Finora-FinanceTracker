@@ -17,20 +17,13 @@ import { generateExpenseReport } from '../utils/excel-generator';
 import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../constants';
 import { toast } from '../utils/notifications';
 
-// constants moved to shared constants.ts
-
 export const ExpensesPage: React.FC = () => {
-  // State for expenses
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
-  
-  // State for date filters
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
     date.setDate(1); // First day of current month
@@ -46,35 +39,29 @@ export const ExpensesPage: React.FC = () => {
   const [formKey, setFormKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Load expenses data
+
   useEffect(() => {
     const loadExpenses = async () => {
       try {
         setIsLoading(true);
-        
         const [expensesData, summaryData] = await Promise.all([
           expenseApi.getByDateRange(startDate, endDate),
           expenseApi.getSummary(startDate, endDate)
         ]);
-        
         setExpenses(expensesData);
         setSummary(summaryData);
-      } catch (error) {
-        console.error('Failed to load expenses:', error);
+      } catch {
         setError('Failed to load expenses');
         toast.error('Failed to load expenses');
       } finally {
         setIsLoading(false);
       }
     };
-    
     if (startDate && endDate) {
       loadExpenses();
     }
   }, [startDate, endDate]);
-  
-  // Filter expenses
+
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           expense.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -83,8 +70,7 @@ export const ExpensesPage: React.FC = () => {
     
     return matchesSearch && matchesCategory && matchesPaymentMethod;
   });
-  
-  // Get data for category pie chart
+
   const getCategoryData = () => {
     const categories: Record<string, number> = {};
     
@@ -98,8 +84,7 @@ export const ExpensesPage: React.FC = () => {
     
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   };
-  
-  // Get data for payment method pie chart
+
   const getPaymentMethodData = () => {
     const methods: Record<string, number> = {};
     
@@ -113,8 +98,7 @@ export const ExpensesPage: React.FC = () => {
     
     return Object.entries(methods).map(([name, value]) => ({ name, value }));
   };
-  
-  // Get monthly spending data for bar chart
+
   const getMonthlySpendingData = () => {
     const months: Record<string, number> = {};
     
@@ -146,8 +130,7 @@ export const ExpensesPage: React.FC = () => {
       };
     });
   };
-  
-  // Handle export to Excel
+
   const handleExportExcel = () => {
     generateExpenseReport(
       filteredExpenses,
@@ -164,8 +147,7 @@ export const ExpensesPage: React.FC = () => {
       const newExpense = await expenseApi.create(data);
       setExpenses(prev => [...prev, newExpense]);
       setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to add expense:', error);
+    } catch {
       toast.error('Failed to add expense');
     } finally {
       setIsSubmitting(false);

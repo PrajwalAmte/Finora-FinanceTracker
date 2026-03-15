@@ -67,7 +67,6 @@ public class InvestmentController {
 
     @GetMapping("/summary")
     public InvestmentSummaryDTO getInvestmentSummary() {
-        // Exclude investments linked to SIPs — their value is shown on the SIP page instead.
         var sipLinkedIds = sipService.getLinkedInvestmentIds();
         var totalValue      = investmentService.getTotalInvestmentValueExcluding(sipLinkedIds);
         var totalProfitLoss = investmentService.getTotalProfitLossExcluding(sipLinkedIds);
@@ -78,10 +77,6 @@ public class InvestmentController {
                 .build();
     }
 
-    /**
-     * Fires a price/NAV refresh in a background thread and returns 202 immediately.
-     * The frontend should reload data after a short delay (e.g. 8–10 seconds).
-     */
     @PostMapping("/refresh-prices")
     public ResponseEntity<Map<String, String>> refreshPrices() {
         Thread.ofVirtual().start(() -> {
@@ -98,22 +93,11 @@ public class InvestmentController {
         ));
     }
 
-    /**
-     * Searches AMFI mutual fund schemes by name keyword.
-     * Returns up to 15 matches with schemeCode, name, and current NAV.
-     */
     @GetMapping("/search-mf")
     public List<Map<String, Object>> searchMf(@RequestParam(required = false, defaultValue = "") String q) {
         return amfiNavService.searchByName(q);
     }
 
-    /**
-     * Add units to an existing investment.
-     * Recalculates the weighted-average buy price automatically.
-     *
-     * POST /api/investments/{id}/add-units
-     * Body: { "quantity": 10.5, "price": 150.00 }
-     */
     @PostMapping("/{id}/add-units")
     public InvestmentResponseDTO addUnits(
             @PathVariable Long id,
@@ -122,14 +106,6 @@ public class InvestmentController {
         return investmentMapper.toDTO(updated);
     }
 
-    /**
-     * Sell units from an existing investment.
-     * - Returns 200 + updated investment when partially sold.
-     * - Returns 204 No Content when all units are sold (investment is deleted).
-     *
-     * POST /api/investments/{id}/sell-units
-     * Body: { "quantity": 5, "price": 200.00 }
-     */
     @PostMapping("/{id}/sell-units")
     public ResponseEntity<?> sellUnits(
             @PathVariable Long id,

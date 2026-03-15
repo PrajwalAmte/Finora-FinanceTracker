@@ -33,31 +33,27 @@ export const LoansPage: React.FC = () => {
         ]);
         setLoans(loansData);
         setSummary(summaryData);
-      } catch (error) {
-        console.error('Failed to load loans:', error);
+      } catch {
+        // Error handled by apiClient interceptor
       } finally {
         setIsLoading(false);
       }
     };
-    
     loadLoans();
   }, []);
-  
-  // Filter loans based on search term
+
   const filteredLoans = loans.filter(loan => 
     loan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     loan.interestType.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
-  // Get chart data for loan distribution
+
   const getLoanDistributionData = () => {
     return filteredLoans.map(loan => ({
       name: loan.name,
       value: loan.currentBalance
     }));
   };
-  
-  // Get interest type distribution
+
   const getInterestTypeData = () => {
     const data: Record<string, number> = {};
     
@@ -72,8 +68,7 @@ export const LoansPage: React.FC = () => {
     
     return Object.entries(data).map(([name, value]) => ({ name, value }));
   };
-  
-  // Get bar chart data for principal vs interest
+
   const getPrincipalInterestData = () => {
     return filteredLoans.map(loan => ({
       name: loan.name,
@@ -89,8 +84,8 @@ export const LoansPage: React.FC = () => {
       const newLoan = await loanApi.create(data);
       setLoans(prev => [...prev, newLoan]);
       setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to add loan:', error);
+    } catch {
+      // Error handled by apiClient interceptor
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +101,6 @@ export const LoansPage: React.FC = () => {
     setLoans(prev => prev.filter(loan => loan.id !== id));
   };
 
-  // Handle export to Excel
   const handleExportExcel = () => {
     generateLoanReport(
       filteredLoans,

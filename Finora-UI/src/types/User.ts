@@ -9,9 +9,26 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;
+  // Vault encryption
+  vaultEnabled: boolean;
+  vaultSalt: string | null;
 }
 
 export interface AuthResponse {
   token: string;
   user: UserProfile;
+}
+
+export interface VaultStatus {
+  vaultEnabled: boolean;
+  vaultSalt: string | null;
+}
+
+export interface VaultEnableRequest {
+  passphrase: string;
+  confirmation: string;
+}
+
+export interface VaultDisableRequest {
+  passphrase: string;
 }

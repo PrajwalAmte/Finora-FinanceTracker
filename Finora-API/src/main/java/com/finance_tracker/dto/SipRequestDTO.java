@@ -14,7 +14,6 @@ public class SipRequestDTO {
     @NotBlank(message = "Name is required")
     private String name;
 
-    // Optional: needed for AMFI NAV auto-refresh; can be null for import-derived SIPs
     private String schemeCode;
 
     @NotNull(message = "Monthly amount is required")
@@ -24,22 +23,16 @@ public class SipRequestDTO {
 
     private LocalDate startDate;
 
-    // Optional — defaults to 120 months (10 years) when null
     private Integer durationMonths;
 
-    // Current NAV and total units — sent by frontend when creating from statement import
     private BigDecimal currentNav;
     private BigDecimal totalUnits;
 
-    // Actual total invested so far; replaces monthlyAmount × elapsed-months calculation.
-    // Optional — leave null to start fresh (0). Seed from statement data when available.
     private BigDecimal totalInvested;
 
-    // For SIPs created from MF import
     private String isin;
     private String importSource;
 
-    // Links this SIP to an existing Investment (MF backed SIPs).
     private Long investmentId;
 }
 

@@ -1,5 +1,6 @@
 package com.finance_tracker.model;
 
+import com.finance_tracker.utils.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import jakarta.validation.constraints.*;
@@ -17,6 +18,7 @@ public class Loan {
     private Long id;
 
     @NotBlank
+    @Convert(converter = EncryptedStringConverter.class)
     private String name;
 
     @Digits(integer = 17, fraction = 2)
@@ -27,15 +29,15 @@ public class Loan {
     @Digits(integer = 3, fraction = 6)
     @DecimalMin(value = "0.0", inclusive = false)
     @Column(precision = 9, scale = 6)
-    private BigDecimal interestRate; // Annual interest rate (in percentage)
+    private BigDecimal interestRate;
 
     @Enumerated(EnumType.STRING)
     @NotNull
-    private LoanInterestType interestType; // SIMPLE, COMPOUND
+    private LoanInterestType interestType;
 
     @Enumerated(EnumType.STRING)
     @NotNull
-    private CompoundingFrequency compoundingFrequency; // MONTHLY, QUARTERLY, YEARLY (for compound interest)
+    private CompoundingFrequency compoundingFrequency;
     private LocalDate startDate;
     private Integer tenureMonths;
 
@@ -49,7 +51,6 @@ public class Loan {
     @Column(name = "user_id")
     private Long userId;
 
-    // Helper methods
     public LocalDate getEndDate() {
         if (startDate == null || tenureMonths == null) {
             return null;

@@ -26,7 +26,6 @@ public class InvestmentResponseDTO {
     private BigDecimal currentValue;
     private BigDecimal profitLoss;
     private BigDecimal returnPercentage;
-    /** NULL = manual entry; non-null = CAS / CAMS / ZERODHA_EXCEL */
     private String isin;
     private String importSource;
 }

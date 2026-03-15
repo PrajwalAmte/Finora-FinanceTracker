@@ -93,11 +93,6 @@ public class SipService {
         ledgerService.recordEvent("SIP", String.valueOf(id), "DELETE", before, null, String.valueOf(userId));
     }
 
-    /**
-     * Total current value across ALL SIPs:
-     *  - Linked SIPs  → current value pulled from the backing Investment row (qty × currentPrice)
-     *  - Standalone SIPs → own NAV-based tracking (totalUnits × currentNav)
-     */
     public BigDecimal getTotalSipValue() {
         List<Sip> sips = getAllSips();
 
@@ -117,11 +112,6 @@ public class SipService {
         return standaloneValue.add(linkedValue);
     }
 
-    /**
-     * Total amount invested across ALL SIPs:
-     *  - Linked SIPs  → cost basis from the backing Investment (qty × avg buy price)
-     *  - Standalone SIPs → stored totalInvested field
-     */
     public BigDecimal getTotalSipInvestment() {
         List<Sip> sips = getAllSips();
 
@@ -142,10 +132,6 @@ public class SipService {
         return standalone.add(linked);
     }
 
-    /**
-     * Returns the investment IDs that are linked to the current user's SIPs.
-     * Used by Investment summary to exclude these from its totals (avoids double-counting).
-     */
     public List<Long> getLinkedInvestmentIds() {
         return getAllSips().stream()
                 .filter(sip -> sip.getInvestmentId() != null)
@@ -262,10 +248,6 @@ public class SipService {
                 || lastInvestment.getYear() != today.getYear();
     }
 
-    /**
-     * Records a manual monthly SIP payment made by the user.
-     * Adds units = monthlyAmount / currentNav and sets lastInvestmentDate = today.
-     */
     @Transactional
     public Sip recordPayment(Long id) {
         Long userId = resolveUserId();
@@ -273,7 +255,6 @@ public class SipService {
                 .orElseThrow(() -> new com.finance_tracker.exception.ResourceNotFoundException("Sip", id));
         validateOwnership(sip.getUserId(), userId);
 
-        // Add units for this installment (if NAV is available).
         BigDecimal currentNav = sip.getCurrentNav();
         if (currentNav != null && currentNav.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal unitsAdded = sip.getMonthlyAmount()
@@ -282,7 +263,6 @@ public class SipService {
             sip.setTotalUnits(existing.add(unitsAdded));
         }
 
-        // Accumulate total invested (actual money paid, not derived from elapsed months).
         BigDecimal invested = sip.getTotalInvested() != null ? sip.getTotalInvested() : BigDecimal.ZERO;
         sip.setTotalInvested(invested.add(sip.getMonthlyAmount()));
 
@@ -290,7 +270,6 @@ public class SipService {
         sip.setLastInvestmentDate(today);
         sip.setLastUpdated(today);
 
-        // Advance the next installment date by one month.
         if (sip.getStartDate() != null) {
             sip.setStartDate(sip.getStartDate().plusMonths(1));
         }

@@ -1,5 +1,6 @@
 package com.finance_tracker.model;
 
+import com.finance_tracker.utils.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import jakarta.validation.constraints.*;
@@ -17,6 +18,7 @@ public class Investment {
     private Long id;
 
     @NotBlank
+    @Convert(converter = EncryptedStringConverter.class)
     private String name;
 
     @NotBlank
@@ -47,24 +49,24 @@ public class Investment {
     @Column(name = "user_id")
     private Long userId;
 
-    // null for manual entries; DB partial unique index on (user_id, isin) prevents duplicate imports
     private String isin;
 
-    // null = manual (sacred, never overwritten); non-null = CAS / CAMS / ZERODHA_EXCEL / etc.
     @Column(name = "import_source")
     private String importSource;
 
-    // Helper methods
     public BigDecimal getCurrentValue() {
+        if (quantity == null || currentPrice == null) return BigDecimal.ZERO;
         return quantity.multiply(currentPrice);
     }
 
     public BigDecimal getProfitLoss() {
+        if (quantity == null || purchasePrice == null) return BigDecimal.ZERO;
         BigDecimal costBasis = quantity.multiply(purchasePrice);
         return getCurrentValue().subtract(costBasis);
     }
 
     public BigDecimal getReturnPercentage() {
+        if (quantity == null || purchasePrice == null) return BigDecimal.ZERO;
         BigDecimal costBasis = quantity.multiply(purchasePrice);
         if (costBasis.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;

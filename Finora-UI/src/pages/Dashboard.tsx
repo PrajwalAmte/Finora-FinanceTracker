@@ -11,72 +11,51 @@ export const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
 
-  // Load all summary data using facade
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
-        // Get current date for expense summary
         const today = new Date();
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
         const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-        
-        // Fetch comprehensive summary with single API call
         const result = await summaryApi.getComprehensiveSummary(firstDayOfMonth, lastDayOfMonth);
-        
         setSummary(result);
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
+      } catch {
+        // Error handled by apiClient interceptor
       } finally {
         setIsLoading(false);
       }
     };
-    
     fetchData();
   }, []);
 
-  // Prepare expense category data for pie chart
   const getExpenseCategoryData = () => {
     if (!summary?.expenseSummary?.expensesByCategory) return [];
-    
     return Object.entries(summary.expenseSummary.expensesByCategory).map(([name, value]) => ({
       name,
       value
     }));
   };
 
-  // Prepare investment data for pie chart
   const getAssetAllocationData = () => {
     const investmentValue = summary?.investmentSummary?.totalValue || 0;
     const sipValue = summary?.sipSummary?.totalCurrentValue || 0;
-    
     return [
       { name: 'Investments', value: investmentValue },
       { name: 'SIPs', value: sipValue }
     ];
   };
 
-  // Calculate total return percentage
-const getTotalReturnPercentage = () => {
-  if (!summary) return undefined;
-  
-  const investmentValue = summary.investmentSummary.totalValue || 0;
-  const investmentProfitLoss = summary.investmentSummary.totalProfitLoss || 0;
-  
-  const sipValue = summary.sipSummary.totalCurrentValue || 0;
-  const sipProfitLoss = summary.sipSummary.totalProfitLoss || 0;
-  
-  // Total current value
-  const totalCurrentValue = investmentValue + sipValue;
-  
-  // Total profit/loss
-  const totalProfitLoss = investmentProfitLoss + sipProfitLoss;
-  
-  // Total invested = current value - profit/loss
-  const totalInvested = totalCurrentValue - totalProfitLoss;
-  
-  if (totalInvested === 0) return undefined;
+  const getTotalReturnPercentage = () => {
+    if (!summary) return undefined;
+    const investmentValue = summary.investmentSummary.totalValue || 0;
+    const investmentProfitLoss = summary.investmentSummary.totalProfitLoss || 0;
+    const sipValue = summary.sipSummary.totalCurrentValue || 0;
+    const sipProfitLoss = summary.sipSummary.totalProfitLoss || 0;
+    const totalCurrentValue = investmentValue + sipValue;
+    const totalProfitLoss = investmentProfitLoss + sipProfitLoss;
+    const totalInvested = totalCurrentValue - totalProfitLoss;
+    if (totalInvested === 0) return undefined;
   
   return (totalProfitLoss / totalInvested) * 100;
 };

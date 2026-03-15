@@ -24,7 +24,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
   const [dialogMode, setDialogMode] = useState<DialogMode>('edit');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Trade form state
   const [tradeQty, setTradeQty] = useState('');
   const [tradePrice, setTradePrice] = useState('');
 
@@ -39,7 +38,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     if (!isLoading) setDialogOpen(false);
   };
 
-  // ── Edit Details ──────────────────────────────────────────────────────────
   const handleEdit = async (data: Partial<Investment>) => {
     if (!investment.id) return;
     try {
@@ -55,7 +53,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     }
   };
 
-  // ── Add Units ─────────────────────────────────────────────────────────────
   const handleAddUnits = async (e: React.FormEvent) => {
     e.preventDefault();
     const qty   = parseFloat(tradeQty);
@@ -80,7 +77,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     }
   };
 
-  // ── Sell Units ────────────────────────────────────────────────────────────
   const handleSellUnits = async (e: React.FormEvent) => {
     e.preventDefault();
     const qty   = parseFloat(tradeQty);
@@ -111,7 +107,6 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!investment.id) return;
     if (!window.confirm('Are you sure you want to delete this investment?')) return;
@@ -126,13 +121,11 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
     }
   };
 
-  // ── Dialog title ──────────────────────────────────────────────────────────
   const dialogTitle =
     dialogMode === 'edit' ? 'Edit Investment' :
     dialogMode === 'add'  ? `Add Units — ${investment.name}` :
                             `Sell Units — ${investment.name}`;
 
-  // ── Trade form (shared for add & sell) ───────────────────────────────────
   const TradeForm = ({ mode }: { mode: 'add' | 'sell' }) => {
     const isSell = mode === 'sell';
     const realizedPnl =
