@@ -13,6 +13,7 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
     return {
@@ -77,7 +78,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      {!isLoading && !hasData && <WelcomeOnboarding />}
+      {!isLoading && !hasData && showOnboarding && <WelcomeOnboarding onDismiss={() => setShowOnboarding(false)} />}
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
