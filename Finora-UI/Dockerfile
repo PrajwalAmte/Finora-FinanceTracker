@@ -28,7 +28,9 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Railway sets PORT env var; default to 80 for local
+# BACKEND_URL must be passed as environment variable at runtime or set to default
 ENV PORT=80
+ENV BACKEND_URL=https://finora-api.up.railway.app
 EXPOSE ${PORT}
 
 # nginx:alpine entrypoint auto-runs envsubst on /etc/nginx/templates/*.template
