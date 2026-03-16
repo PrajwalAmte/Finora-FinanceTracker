@@ -3,9 +3,7 @@ package com.finance_tracker.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
-import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -35,12 +33,10 @@ public class LedgerEvent {
     @Column(name = "action_type", nullable = false)
     private String actionType;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "before_state", columnDefinition = "jsonb")
+    @Column(name = "before_state", columnDefinition = "text")
     private String beforeState;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "after_state", columnDefinition = "jsonb")
+    @Column(name = "after_state", columnDefinition = "text")
     private String afterState;
 
     @Column(name = "event_timestamp", nullable = false)

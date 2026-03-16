@@ -273,11 +273,11 @@ export const InvestmentsPage: React.FC = () => {
                                       size="sm"
                                       variant={
                                         investment.importSource === 'CAS' ? 'default' :
-                                        investment.importSource === 'CAMS' ? 'secondary' :
+                                        investment.importSource === 'CAMS' ? 'primary' :
                                         'outline'
                                       }
                                     >
-                                      {investment.importSource === 'ZERODHA_EXCEL' ? 'Zerodha' : investment.importSource}
+                                      {investment.importSource === 'ZERODHA_EXCEL' ? 'Broker Import' : investment.importSource}
                                     </Badge>
                                   )}
                                 </div>

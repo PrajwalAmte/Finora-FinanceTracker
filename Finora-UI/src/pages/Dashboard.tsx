@@ -78,7 +78,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      {!isLoading && !hasData && showOnboarding && <WelcomeOnboarding onDismiss={() => setShowOnboarding(false)} />}
+      {!isLoading && !hasData && showOnboarding && <WelcomeOnboarding hasData={!!hasData} onDismiss={() => setShowOnboarding(false)} />}
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>

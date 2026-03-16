@@ -259,7 +259,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     <span className="block text-xs mt-1 opacity-75">
                       {type === 'CAS' && 'Consolidated Account Statement'}
                       {type === 'CAMS' && 'CAMS Statement PDF'}
-                      {type === 'HOLDINGS_FILE' && 'Zerodha/Broker Excel'}
+                      {type === 'HOLDINGS_FILE' && 'Any Broker Excel / CSV'}
                     </span>
                   </button>
                 ))}

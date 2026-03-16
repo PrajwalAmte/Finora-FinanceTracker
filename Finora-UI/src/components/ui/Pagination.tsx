@@ -8,6 +8,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   totalItems?: number;
   itemsPerPage?: number;
+  className?: string;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -16,6 +17,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   totalItems,
   itemsPerPage,
+  className = '',
 }) => {
   if (totalPages <= 1) return null;
 
@@ -36,7 +38,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const showingTo = totalItems ? Math.min(currentPage * (itemsPerPage || 10), totalItems) : 0;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3">
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-3 ${className}`}>
       {totalItems && (
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
           Showing {showingFrom} to {showingTo} of {totalItems}
