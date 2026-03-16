@@ -75,6 +75,12 @@ public class SipService {
             if (before != null) validateOwnership(before.getUserId(), userId);
             sip.setUserId(userId);
             Sip saved = sipRepository.save(sip);
+            if (saved.getInvestmentId() != null && saved.getName() != null) {
+                investmentRepository.findById(saved.getInvestmentId()).ifPresent(inv -> {
+                    inv.setName(saved.getName());
+                    investmentRepository.save(inv);
+                });
+            }
             ledgerService.recordEvent("SIP", String.valueOf(saved.getId()), "UPDATE", before, saved, String.valueOf(userId));
             return saved;
         }
