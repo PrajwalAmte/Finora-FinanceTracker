@@ -27,8 +27,9 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Store nginx config as a template
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Railway sets PORT env var; default to 80 for local
+# Railway sets PORT and BACKEND_URL env vars; defaults for local development
 ENV PORT=80
+ENV BACKEND_URL=http://localhost:8080
 EXPOSE ${PORT}
 
 # nginx:alpine entrypoint auto-runs envsubst on /etc/nginx/templates/*.template
@@ -37,6 +38,3 @@ CMD ["nginx", "-g", "daemon off;"]
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
-
-# Start NGINX
-CMD ["nginx", "-g", "daemon off;"]
