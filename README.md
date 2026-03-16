@@ -1,6 +1,10 @@
-# Finance Tracker
+# Finora - Personal Finance Tracker
 
-A full-stack personal finance management application with real-time market data integration, automated portfolio tracking, and comprehensive financial analytics.
+A full-stack personal finance management application for tracking investments, mutual funds, loans, SIPs, and expenses. Features statement import from broker and CAMS/CAS PDFs, a tamper-evident audit ledger, optional client-side data encryption via a personal vault, and encrypted backup/restore.
+
+**Live application:** https://finora-financetracker.up.railway.app/
+
+---
 
 ## Screenshots
 
@@ -10,468 +14,401 @@ A full-stack personal finance management application with real-time market data 
 ### Dashboard - Dark Mode
 ![Dashboard Dark Mode](docs/Dasboard-Dark.png)
 
-The dashboard provides a comprehensive overview of your financial portfolio with:
-- Net Worth Tracking: Real-time portfolio valuation
-- Investment Performance: Overall return percentage with automated price updates
-- Loan Management: Outstanding loan balance tracking
-- Expense Monitoring: Monthly spending summary
-- Asset Allocation Chart: Visual breakdown of investment distribution
-- Expense Analytics: Categorized spending visualization (Utilities, Groceries, Shopping)
-- Quick Navigation: Direct links to detailed views for investments and expenses
+---
 
-## Quick Start with Docker (Recommended)
+## Deployment
 
-The easiest way to run the entire application is using Docker Compose. All services (database, backend, frontend) will be started automatically.
+The application is deployed on Railway with the following services:
+
+| Service | Platform | URL |
+|---|---|---|
+| Frontend | Railway (nginx:alpine container) | https://finora-financetracker.up.railway.app |
+| Backend API | Railway (Java 21 container) | https://finora-api.up.railway.app |
+| Database | Supabase (PostgreSQL 17) | Managed, not public |
+
+The frontend nginx container proxies all `/api/*` requests to the backend using the `BACKEND_URL` environment variable, so the browser never makes cross-origin requests directly.
+
+---
+
+## Quick Start with Docker (Local Development)
 
 ### Prerequisites
 
 - Docker Desktop installed and running
-- Docker Compose (included with Docker Desktop)
 
-### Starting the Application
+### Start
 
-**Linux/macOS:**
-```bash
-./run.sh
-```
-
-**Windows:**
-```cmd
-run.bat
-```
-
-**Manual Start:**
 ```bash
 docker compose up --build
 ```
 
-### Access Points
+### Access
 
-Once started, access the application at:
-
-- **Frontend**: http://localhost
-- **Backend API**: http://localhost:8082/api
-- **API Documentation (Swagger)**: http://localhost:8082/swagger-ui.html
-- **Health Check**: http://localhost:8082/actuator/health
-- **JWT Token Generation**: http://localhost:8082/auth/token
-- **Database**: localhost:5433 (for external tools)
+| Service | URL |
+|---|---|
+| Frontend | http://localhost |
+| Backend API | http://localhost:8082/api |
+| API docs (Swagger) | http://localhost:8082/swagger-ui.html |
+| Health check | http://localhost:8082/actuator/health |
 
 ### What Gets Started
 
-1. **PostgreSQL Database** (port 5433→5432)
-   - Database: `finance_tracker`
-   - User: `postgres`
-   - Password: `postgres`
-   - Data persisted in Docker volume
-   - External port mapped to 5433 to avoid conflicts
+1. **PostgreSQL** (host port 5433 mapped to container 5432) — database `finance_tracker`, persisted in a Docker volume
+2. **Spring Boot API** (port 8082) — REST API with JWT authentication, Flyway migrations, and scheduled background tasks
+3. **React Frontend** (port 80) — served via nginx, proxies `/api/*` to the backend
 
-2. **Spring Boot Backend** (port 8082)
-   - REST API endpoints with JWT authentication
-   - Auto-token generation endpoint at `/auth/token`
-   - Automated schedulers for price updates
-   - Swagger UI for API documentation
-   - CORS configured for frontend access
-   - Environment variables loaded from `.env` file
+### Stop
 
-3. **React Frontend** (port 80)
-   - Served via NGINX
-   - Modern UI with real-time data
-   - Connects to backend at `http://localhost:8082/api`
-
-### Stopping Services
-
-Press `Ctrl+C` in the terminal, or run:
 ```bash
 docker compose down
 ```
 
-To remove volumes (WARNING: deletes all data):
+To also delete all data:
+
 ```bash
 docker compose down -v
 ```
+
+---
 
 ## System Architecture
 
 ```mermaid
 graph TB
-    %% Frontend Layer
-    UI[React Frontend<br/>TypeScript + Tailwind CSS]
-    
-    %% API Gateway
-    API[Spring Boot API<br/>REST Endpoints + JWT Auth]
-    
-    %% Service Layer
-    subgraph Services["Service Layer"]
-        IS[Investment Service]
-        SS[SIP Service]  
-        ES[Expense Service]
-        LS[Loan Service]
-        PS[Price Service]
+    Browser["Browser"]
+
+    subgraph Frontend["Frontend — nginx:alpine"]
+        SPA["React SPA (TypeScript + Tailwind CSS)"]
+        Proxy["nginx reverse proxy\n/api/* → BACKEND_URL"]
     end
-    
-    %% Data Layer
-    DB[(PostgreSQL<br/>Database)]
-    
-    %% Scheduler Layer
-    subgraph Schedulers["Automated Schedulers"]
-        PU[Price Updates<br/>4x Daily]
-        NU[NAV Updates<br/>4x Daily]
-        SI[SIP Processing<br/>Monthly]
-        LU[Loan Updates<br/>Daily]
+
+    subgraph Backend["Backend — Spring Boot 3.4.5 / Java 21"]
+        Auth["Auth Controller\n/api/auth"]
+        API["REST Controllers\n/api/investments /api/expenses\n/api/loans /api/sips /api/statements\n/api/backup /api/ledger /api/users"]
+        Services["Service Layer\n(investments, SIPs, expenses,\nloans, statements, ledger, backup)"]
+        Parsers["Statement Parsers\n(CAS PDF, CAMS PDF,\nBroker Excel / CSV)"]
+        Prices["Price Provider\n(strategy pattern)"]
+        Schedulers["Schedulers\nSIP monthly · Loan daily"]
+        Security["Security\nJWT · Login rate limiter\nField encryption · Vault"]
     end
-    
-    %% External APIs
+
+    subgraph DB["Database — PostgreSQL (Supabase)"]
+        Tables["users · expenses · investments\nloans · sips · ledger_events"]
+    end
+
     subgraph External["External APIs"]
-        YF[Yahoo Finance<br/>Stock Prices]
-        AM[AMFI<br/>Mutual Fund NAV]
-        TD[Twelve Data<br/>Backup API]
+        YF["Yahoo Finance\n(stock prices — primary)"]
+        AV["Alpha Vantage\n(stock prices — fallback)"]
+        AMFI["AMFI NAV feed\n(mutual fund NAV)"]
     end
-    
-    %% Connections
-    UI -->|HTTP/REST + JWT| API
+
+    Browser -->|HTTPS| SPA
+    SPA --> Proxy
+    Proxy -->|JWT| Auth
+    Proxy -->|JWT| API
+    Auth --> Services
     API --> Services
+    Services --> Parsers
+    Services --> Prices
     Services --> DB
-    
-    %% Scheduler connections
-    PU --> PS
-    NU --> SS
-    SI --> SS
-    LU --> LS
-    
-    %% External API connections
-    PS -->|Primary| YF
-    PS -->|Fallback| TD
-    SS --> AM
-    
-    %% Styling
-    classDef frontend fill:#e1f5fe,color:#000000
-    classDef backend fill:#f3e5f5,color:#000000
-    classDef database fill:#e8f5e8,color:#000000
-    classDef scheduler fill:#fff3e0,color:#000000
-    classDef external fill:#fce4ec,color:#000000
-    
-    class UI frontend
-    class API,Services backend
-    class DB database
-    class Schedulers,PU,NU,SI,LU scheduler
-    class External,YF,AM,TD external
+    Schedulers --> Services
+    Prices -->|primary| YF
+    Prices -->|fallback| AV
+    Services --> AMFI
+
+    classDef fe fill:#e1f5fe,color:#000
+    classDef be fill:#f3e5f5,color:#000
+    classDef db fill:#e8f5e8,color:#000
+    classDef ext fill:#fce4ec,color:#000
+
+    class SPA,Proxy fe
+    class Auth,API,Services,Parsers,Prices,Schedulers,Security be
+    class Tables db
+    class YF,AV,AMFI ext
 ```
 
-## Key Features
+### Frontend
 
-- Real-time Portfolio Tracking: Automated price updates 4 times daily
-- JWT Authentication: Secure API access with auto-token generation
-- SIP Management: Monthly automated investment processing with NAV tracking
-- Expense Analytics: Categorized spending analysis with visualizations
-- Loan Calculator: EMI tracking with automatic balance updates
-- Data Export: PDF/Excel report generation
-- API Failover: Dual API integration for high reliability
-- Smart Scheduling: Configurable cron jobs for different market timings
-- Environment-based Configuration: Secure credential management via `.env` file
+React 18 with TypeScript, built with Vite and styled with Tailwind CSS. Served as a static SPA from nginx. All API calls go through the nginx proxy at `/api/`.
+
+### Backend
+
+Spring Boot 3.4.5 on Java 21. Organized into:
+
+- **Controllers** — REST endpoints under `/api/*`, all protected by JWT except `/api/auth/register` and `/api/auth/login`
+- **Services** — business logic for each domain (investments, SIPs, expenses, loans, users, statements, ledger, backup)
+- **Statement parsers** — CAS PDF parser, CAMS PDF parser, and a broker Excel/CSV parser that auto-detects column layout
+- **Price providers** — strategy pattern with Yahoo Finance as primary and Alpha Vantage as fallback
+- **Schedulers** — SIP monthly processing (1st of each month, 9 AM) and loan balance updates (daily, midnight)
+- **Ledger service** — append-only, hash-chained audit log of every create/update/delete written to `ledger_events`
+- **Backup service** — AES-256-GCM encrypted full-data export and import with ledger chain integrity verification
+- **Field encryption** — optional AES-256-GCM column-level encryption for sensitive fields (name, description, email), controlled by `FIELD_ENCRYPTION_KEY`
+- **Vault** — optional user-held passphrase that adds a second encryption layer on top of field encryption
+
+### Database
+
+PostgreSQL managed by Flyway migrations:
+
+- `V1__init.sql` — all tables with `IF NOT EXISTS` (idempotent)
+
+Tables: `users`, `expenses`, `investments`, `loans`, `sips`, `ledger_events`
+
+---
+
+## Features
+
+**Portfolio management**
+- Stocks, ETFs, bonds, and mutual funds in one place
+- Import holdings directly from broker Excel/CSV exports (Zerodha, Groww, Upstox, HDFC, ICICI, Angel, 5paisa, Kotak, Sharekhan, and others that follow a standard column layout)
+- Import from CAMS and CAS (Consolidated Account Statement) PDFs
+- Two-step preview and confirm import flow — select which holdings to import, skip manual entries
+
+**Automated price updates**
+- Stock and ETF prices fetched from Yahoo Finance on demand; Alpha Vantage used as fallback when configured
+- Mutual fund NAV pulled from the official AMFI daily feed (amfiindia.com) and cached in-memory
+
+**SIP tracking**
+- Monthly SIP installment processing runs automatically on the 1st of each month
+- Links SIP records to their corresponding investment holding when imported from a statement
+
+**Expenses**
+- Categorized expense entries with payment method tracking
+- Monthly spending trend and category breakdown charts
+
+**Loans**
+- Simple and compound interest support with configurable compounding frequency
+- Daily loan balance recalculation
+- EMI tracking and remaining tenure display
+
+**Audit ledger**
+- Every create, update, and delete on investments, expenses, loans, and SIPs is written to an append-only `ledger_events` table
+- Events are SHA-256 hash-chained (each event includes the hash of the previous event) — any tampering breaks the chain
+- Integrity can be verified at any time from the API
+
+**Vault (optional)**
+- Users can enable a personal vault with a passphrase (minimum 8 characters)
+- The passphrase derives an additional AES-256-GCM key that wraps field-level encryption
+- Without the passphrase, encrypted data cannot be read even with database access
+- Passphrase is never stored — loss of passphrase means permanent loss of access to encrypted records
+
+**Backup and restore**
+- Full data export encrypted with AES-256-GCM using a password chosen at export time
+- Backup file includes the ledger event chain; integrity is verified before import
+- Restoring a backup replaces all existing data for the user
+
+**Excel reports**
+- Per-section Excel exports for investments, expenses, loans, and SIPs
+
+**Global search**
+- Keyboard-accessible search across all investments, expenses, loans, and SIPs
+
+---
+
+## API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register a new account (email + username + password) |
+| POST | `/api/auth/login` | Login with email and password, returns JWT |
+
+### Finance data
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET/POST | `/api/investments` | List all / create investment |
+| PUT/DELETE | `/api/investments/{id}` | Update / delete investment |
+| POST | `/api/investments/refresh-prices` | Trigger on-demand price refresh |
+| GET/POST | `/api/expenses` | List all / create expense |
+| PUT/DELETE | `/api/expenses/{id}` | Update / delete expense |
+| GET/POST | `/api/loans` | List all / create loan |
+| PUT/DELETE | `/api/loans/{id}` | Update / delete loan |
+| GET/POST | `/api/sips` | List all / create SIP |
+| PUT/DELETE | `/api/sips/{id}` | Update / delete SIP |
+| GET | `/api/finance-summary` | Aggregated dashboard summary |
+
+### Statement import
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/statements/preview` | Upload file, get parsed holdings preview |
+| POST | `/api/statements/confirm` | Confirm selected holdings for import |
+
+### User and vault
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/users/me` | Get current user profile |
+| PATCH | `/api/users/me` | Update username |
+| GET | `/api/users/vault/status` | Check whether vault is enabled |
+| POST | `/api/users/vault/enable` | Enable vault with a passphrase |
+| POST | `/api/users/vault/disable` | Disable vault |
+
+### Backup
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/backup/export` | Download encrypted backup file |
+| POST | `/api/backup/import` | Upload and restore from backup |
+
+### Ledger
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/ledger/verify` | Verify hash chain integrity for current user |
+| GET | `/api/ledger/entity/{type}/{id}` | Get audit timeline for a specific record |
+
+All endpoints except `/api/auth/register` and `/api/auth/login` require a JWT in the Authorization header:
+
+```
+Authorization: Bearer <token>
+```
+
+---
 
 ## Tech Stack
 
-**Backend**: 
-- Spring Boot 3.4.5
+**Backend**
 - Java 21
+- Spring Boot 3.4.5
+- Spring Security (JWT, login rate limiter — 5 attempts per minute per IP)
+- Spring Data JPA + Hibernate 6
+- Flyway (database migrations)
 - PostgreSQL
-- Spring Data JPA
-- Spring Security with JWT
+- Apache PDFBox 3 (CAS and CAMS PDF parsing)
+- Apache POI 5 (broker Excel parsing)
 - Maven
 
-**Frontend**: 
+**Frontend**
 - React 18
 - TypeScript
 - Vite
 - Tailwind CSS
-- Recharts
+- Recharts (charts)
+- SheetJS/xlsx (Excel report generation)
+- React Router
 
-**External APIs**: 
-- Yahoo Finance (stocks)
-- AMFI (mutual funds)
-- Twelve Data (backup)
+**Infrastructure**
+- Railway (container hosting for API and frontend)
+- Supabase (managed PostgreSQL)
+- nginx:alpine (frontend serving and API reverse proxy)
+- Docker / Docker Compose (local development)
+
+**External APIs**
+- Yahoo Finance — stock and ETF prices (no key required)
+- Alpha Vantage — stock price fallback (requires `ALPHAVANTAGE_API_KEY`)
+- AMFI (amfiindia.com) — mutual fund NAV daily feed
+
+---
 
 ## Local Development Setup
 
-If you prefer to run the application without Docker:
-
 ### Prerequisites
 
-- Java 21+
-- Node.js (LTS version)
-- Maven 3.6+
-- PostgreSQL
+- Java 21 or later
+- Node.js LTS
+- Maven 3.6 or later
+- PostgreSQL (or use Docker Compose which sets this up automatically)
 
-### Backend Setup
+### Backend
 
 ```bash
-git clone <repository-url>
-cd Finance_Tracker-API
+cd Finora-API
 
-# Create .env file with required variables
-echo "JWT_SECRET=your_jwt_secret_key_here" > .env
-echo "TWELVEDATA_API_KEY=your_api_key_here" >> .env  # Optional
+# Create .env with required variables
+cat > .env <<EOF
+JWT_SECRET=your_jwt_secret_minimum_32_characters
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=finora
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:5173
+# Optional
+ALPHAVANTAGE_API_KEY=your_key
+FIELD_ENCRYPTION_KEY=your_encryption_key
+EOF
 
-# Configure application.properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/finance_tracker
-spring.datasource.username=your_username
-spring.datasource.password=your_password
-
-# Run the application
-./mvnw spring-boot:run  # Starts on port 8082
+./mvnw spring-boot:run
+# API starts on port 8080 (or PORT env var)
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
-cd Finance_Tracker-UI
-
-# Create .env file
-echo "VITE_API_BASE_URL=http://localhost:8082/api" > .env
+cd Finora-UI
 
 npm install
-npm run dev  # Starts on port 5173
+npm run dev
+# Dev server starts on port 5173
+# Vite proxies /api/* to http://localhost:8080
 ```
 
-## API Endpoints
+---
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/auth/token` | GET | Auto-generate JWT token |
-| `/api/investments` | GET/POST | Portfolio management |
-| `/api/investments/summary` | GET | Portfolio overview |
-| `/api/sips` | GET/POST | SIP tracking |
-| `/api/expenses` | GET/POST | Expense management |
-| `/api/loans` | GET/POST | Loan calculations |
+## Environment Variables
 
-**Full API Documentation**: Interactive API documentation is available via Swagger UI:
-- http://localhost:8082/swagger-ui.html
+### Backend (Railway / .env)
 
-**Authentication**: All API endpoints (except `/auth/token`) require JWT token in Authorization header:
-```
-Authorization: Bearer <your_jwt_token>
-```
+| Variable | Required | Description |
+|---|---|---|
+| `JWT_SECRET` | Yes | Secret key for signing JWT tokens (minimum 32 characters) |
+| `DATABASE_URL` | Railway | Full JDBC URL (overrides individual DB_ vars) |
+| `DB_HOST` | Local | PostgreSQL host |
+| `DB_PORT` | Local | PostgreSQL port |
+| `DB_NAME` | Local | Database name |
+| `DB_USERNAME` | Local | Database user |
+| `DB_PASSWORD` | Local | Database password |
+| `CORS_ALLOWED_ORIGINS` | Yes | Comma-separated list of allowed frontend origins |
+| `ALPHAVANTAGE_API_KEY` | No | Alpha Vantage key for stock price fallback |
+| `FIELD_ENCRYPTION_KEY` | No | Enables AES-256-GCM column-level encryption when set |
+| `PORT` | Auto | Injected by Railway; defaults to 8080 |
+
+### Frontend (Railway)
+
+| Variable | Description |
+|---|---|
+| `BACKEND_URL` | Full URL of the backend service (e.g. `https://finora-api.up.railway.app`) |
+| `PORT` | Injected by Railway; nginx listens on this port |
+
+---
 
 ## Automated Schedulers
 
-The application includes automated background tasks that run as long as the backend container is running:
+| Schedule | Task |
+|---|---|
+| 1st of every month, 9:00 AM | Process monthly SIP installments — deducts monthly amount from each active SIP, updates unit count using current NAV |
+| Every day, midnight | Recalculate loan balances and remaining tenure |
 
-```java
-@Scheduled(cron = "0 0 9,12,15,18 * * *")  // Price Updates (9 AM, 12 PM, 3 PM, 6 PM)
-@Scheduled(cron = "0 0 9 1 * *")           // Monthly SIP Processing (1st of month, 9 AM)
-@Scheduled(cron = "0 0 0 * * *")           // Daily Loan Updates (Midnight)
-```
+Stock price updates are triggered on demand (via the refresh-prices endpoint or from the investments page) rather than on a fixed schedule.
 
-These schedulers automatically execute their tasks in the background without manual intervention.
+---
 
-## External API Integration
+## Security Notes
 
-**Yahoo Finance**: 
-- Real-time stock prices with automatic symbol formatting
-- Example: RELIANCE → RELIANCE.NS (NSE) or RELIANCE.BO (BSE)
-- 10-second rate limiting between requests
+- JWT tokens are signed with HMAC-SHA256 using `JWT_SECRET`
+- Login is rate-limited to 5 attempts per minute per IP address
+- Field-level encryption uses AES-256-GCM with PBKDF2 key derivation (310,000 iterations)
+- The vault adds a second AES-256-GCM encryption layer keyed from the user's passphrase — the passphrase is never stored anywhere
+- The ledger is protected by an append-only trigger in PostgreSQL; events cannot be updated or deleted at the database level
+- Sensitive fields (investment names, expense descriptions, user email) are encrypted at rest when `FIELD_ENCRYPTION_KEY` is configured
 
-**AMFI**: 
-- Official mutual fund NAV data
-- Daily CSV parsing for accurate pricing
-- Caching for improved performance
-
-**Twelve Data**: 
-- Backup API with NSE/BSE support
-- 8-second rate limiting
-- Exponential backoff for failures
-
-## Docker Configuration
-
-### Environment Variables
-
-The application uses `.env` files for sensitive configuration, loaded via `env_file` in `docker-compose.yml`:
-
-**Backend `.env`:**
-```env
-JWT_SECRET=your_jwt_secret_key_here
-TWELVEDATA_API_KEY=your_api_key_here
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/finance_tracker
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=postgres
-SERVER_PORT=8082
-```
-
-**Frontend `.env`:**
-```env
-VITE_API_BASE_URL=http://localhost:8082/api
-```
-
-### Port Mappings
-
-- **Frontend**: 80 (host) → 80 (container)
-- **Backend**: 8082 (host) → 8082 (container)
-- **PostgreSQL**: 5433 (host) → 5432 (container)
-
-### Data Persistence
-
-PostgreSQL data is stored in a Docker volume named `postgres_data`. This persists even after containers are stopped.
-
-**Backup Database:**
-```bash
-docker compose exec postgres pg_dump -U postgres finance_tracker > backup.sql
-```
-
-**Restore Database:**
-```bash
-docker compose exec -T postgres psql -U postgres finance_tracker < backup.sql
-```
-
-### View Logs
-
-```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f backend
-docker compose logs -f frontend
-docker compose logs -f postgres
-```
-
-### Rebuild After Code Changes
-
-```bash
-docker compose up --build
-```
-
-## Troubleshooting
-
-### Port Already in Use
-
-If ports 80, 8082, or 5433 are already in use, modify the port mappings in `docker-compose.yml`:
-
-```yaml
-services:
-  frontend:
-    ports:
-      - "3000:80"  # Change 80 to your preferred port
-  backend:
-    ports:
-      - "8081:8082"  # Change 8082 to your preferred port
-  postgres:
-    ports:
-      - "5434:5432"  # Change 5433 to your preferred port
-```
-
-### Database Connection Issues
-
-Ensure PostgreSQL container is healthy before backend starts. Health checks are configured automatically in `docker-compose.yml`. The backend will wait for the database to be ready before starting.
-
-### Frontend Can't Connect to Backend
-
-1. Verify backend is running: http://localhost:8082/actuator/health
-2. Check browser console for CORS errors (CORS is configured in SecurityConfig)
-3. Verify `VITE_API_BASE_URL=http://localhost:8082/api` in frontend `.env` file
-4. Ensure JWT token is present in request headers
-
-### JWT Authentication Issues
-
-1. Generate a token: http://localhost:8082/auth/token
-2. Copy the token and include it in API requests
-3. Check token expiration settings in backend configuration
-4. Verify `JWT_SECRET` is set in backend `.env` file
-
-### Application Not Starting
-
-```bash
-# Check container status
-docker compose ps
-
-# View detailed logs
-docker compose logs
-
-# Restart services
-docker compose restart
-
-# Clean restart
-docker compose down && docker compose up --build
-```
-
-## Production Build
-
-### Using Docker (Recommended)
-
-```bash
-docker compose up --build -d
-```
-
-**Important for Production:**
-1. Change default database credentials in `.env`
-2. Generate a strong JWT secret (minimum 32 characters)
-3. Update CORS allowed origins in SecurityConfig
-4. Use proper SSL/TLS certificates for HTTPS
-5. Configure firewall rules for ports 80, 8082, 5433
-
-### Manual Build
-
-**Backend:**
-```bash
-cd Finance_Tracker-API
-./mvnw clean package
-java -jar target/finance-tracker-0.0.1-SNAPSHOT.jar
-```
-
-**Frontend:**
-```bash
-cd Finance_Tracker-UI
-npm run build
-# Serve dist/ folder with a web server (nginx, apache, etc.)
-```
-
-## Configuration
-
-**Development**: H2 in-memory database  
-**Production**: PostgreSQL with connection pooling  
-**Authentication**: JWT-based with auto-token generation  
-**CORS**: Configured for frontend access (port 80)  
-**Scheduling**: Configurable cron expressions for different market timings  
-**Rate Limiting**: 10s delays for Yahoo Finance, 8s for Twelve Data  
-**Environment Variables**: Managed via `.env` files loaded by Docker Compose
-
-## Performance Features
-
-- API response caching for NAV data
-- Batch processing for portfolio updates
-- Database indexing for optimized queries
-- Connection pooling for efficient database access
-- Exponential backoff for API failures
-- Automatic retry mechanisms for failed requests
-- JWT token-based stateless authentication
+---
 
 ## Database Schema
 
-The application uses PostgreSQL with the following main entities:
+| Table | Purpose |
+|---|---|
+| `users` | Accounts, roles, vault configuration |
+| `investments` | Stock, ETF, bond, and mutual fund holdings |
+| `expenses` | Categorized expense records |
+| `loans` | Loan records with EMI and interest type |
+| `sips` | SIP configurations and unit tracking |
+| `ledger_events` | Append-only hash-chained audit log |
 
-- **Investments**: Stock and mutual fund holdings
-- **SIPs**: Systematic Investment Plans
-- **Expenses**: Categorized spending records
-- **Loans**: EMI and loan tracking
-- **Price History**: Historical price data for analytics
-
-## Security Considerations
-
-- JWT-based authentication for secure API access
-- Environment variables for sensitive configuration via `.env` files
-- CORS configuration for controlled API access
-- Database credentials stored in `.env` (change for production)
-- API rate limiting to prevent abuse
-- Auto-token generation endpoint for development convenience
-- Spring Security integration with custom SecurityConfig
+---
 
 ## License
 
-MIT License - Built for better financial management and investment tracking
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For issues, questions, or feature requests, please open an issue on the repository.
+MIT
