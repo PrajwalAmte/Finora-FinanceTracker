@@ -55,4 +55,14 @@ export const expenseApi = {
     });
     return response.data;
   },
+
+  bulkDelete: async (ids: number[]): Promise<{ deleted: number }> => {
+    const response = await apiClient.delete(`${BASE_PATH}/bulk`, { data: { ids } });
+    return response.data;
+  },
+
+  bulkUpdate: async (ids: number[], fields: { category?: string; paymentMethod?: string }): Promise<{ updated: number }> => {
+    const response = await apiClient.put(`${BASE_PATH}/bulk`, { ids, ...fields });
+    return response.data;
+  },
 };

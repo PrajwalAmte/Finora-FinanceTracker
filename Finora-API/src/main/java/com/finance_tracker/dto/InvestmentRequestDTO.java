@@ -31,6 +31,10 @@ public class InvestmentRequestDTO {
     @DecimalMin(value = "0.000001", message = "Purchase price must be greater than 0")
     private BigDecimal purchasePrice;
 
+    @Digits(integer = 13, fraction = 6, message = "Invalid current price format")
+    @DecimalMin(value = "0.000001", message = "Current price must be greater than 0")
+    private BigDecimal currentPrice;
+
     private LocalDate purchaseDate;
 }
 

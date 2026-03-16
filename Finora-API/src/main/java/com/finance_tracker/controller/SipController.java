@@ -72,6 +72,13 @@ public class SipController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteSips(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.getOrDefault("ids", List.of());
+        int deleted = sipService.bulkDelete(ids);
+        return ResponseEntity.ok(Map.of("deleted", deleted));
+    }
+
     @GetMapping("/summary")
     public SipSummaryDTO getSipSummary() {
         var totalValue = sipService.getTotalSipValue();

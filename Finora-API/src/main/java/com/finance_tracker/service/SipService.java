@@ -279,4 +279,19 @@ public class SipService {
         return saved;
     }
 
+    @Transactional
+    public int bulkDelete(List<Long> ids) {
+        Long userId = resolveUserId();
+        int count = 0;
+        for (Long id : ids) {
+            Sip sip = sipRepository.findById(id).orElse(null);
+            if (sip == null) continue;
+            validateOwnership(sip.getUserId(), userId);
+            sipRepository.deleteById(id);
+            ledgerService.recordEvent("SIP", String.valueOf(id), "DELETE", sip, null, String.valueOf(userId));
+            count++;
+        }
+        return count;
+    }
+
 }

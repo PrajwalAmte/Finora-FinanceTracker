@@ -72,7 +72,8 @@ const statementApi = {
   confirm: async (request: StatementConfirmRequest): Promise<StatementImportResult> => {
     const response = await apiClient.post<{ data: StatementImportResult }>(
       '/statements/confirm',
-      request
+      request,
+      { timeout: 120000 }
     );
     return response.data.data;
   },

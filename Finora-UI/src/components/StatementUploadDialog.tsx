@@ -48,7 +48,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
   const [result, setResult] = useState<StatementImportResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Step 4: SIP setup for imported MFs
   const [importedMfs, setImportedMfs] = useState<ParsedMFHolding[]>([]);
   type SipSetup = { enabled: boolean; amount: string; startDate: string };
   const [sipSetups, setSipSetups] = useState<Record<string, SipSetup>>({});
@@ -87,7 +86,29 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       const backendType = getBackendType(statementType, file.name);
       const data = await statementApi.preview(file, backendType, password);
       setPreview(data);
+
+      const newEquities = new Set(
+        data.holdings
+          .filter(h => h.status === ImportStatus.NEW)
+          .map(h => h.isin ?? h.symbol)
+      );
+      const newMfs = new Set(
+        data.mfHoldings
+          .filter(m => m.status === ImportStatus.NEW)
+          .map(m => m.isin ?? m.schemeName)
+      );
+      setSelectedEquities(newEquities);
+      setSelectedMfs(newMfs);
+
       setStep(2);
+      const updateCount =
+        data.holdings.filter(h => h.status === ImportStatus.UPDATE).length +
+        data.mfHoldings.filter(m => m.status === ImportStatus.UPDATE).length;
+      if (updateCount > 0) {
+        toast.info(
+          `${updateCount} holding${updateCount > 1 ? 's' : ''} already exist — tick them to overwrite.`
+        );
+      }
       if (data.warnings.length > 0) {
         toast.info(`${data.warnings.length} warnings during parse`);
       }
@@ -110,19 +131,26 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
     setSelectedMfs(next);
   };
 
+  const selectableEquities = (preview?.holdings ?? []).filter(
+    h => h.status !== ImportStatus.SKIP_MANUAL
+  );
+  const selectableMfs = (preview?.mfHoldings ?? []).filter(
+    m => m.status !== ImportStatus.SKIP_MANUAL
+  );
+
   const toggleAllEquities = () => {
-    if (selectedEquities.size === preview?.holdings.length) {
+    if (selectedEquities.size === selectableEquities.length) {
       setSelectedEquities(new Set());
     } else {
-      setSelectedEquities(new Set(preview?.holdings.map(e => e.isin ?? e.symbol) || []));
+      setSelectedEquities(new Set(selectableEquities.map(e => e.isin ?? e.symbol)));
     }
   };
 
   const toggleAllMfs = () => {
-    if (selectedMfs.size === preview?.mfHoldings.length) {
+    if (selectedMfs.size === selectableMfs.length) {
       setSelectedMfs(new Set());
     } else {
-      setSelectedMfs(new Set(preview?.mfHoldings.map(m => m.isin ?? m.schemeName) || []));
+      setSelectedMfs(new Set(selectableMfs.map(m => m.isin ?? m.schemeName)));
     }
   };
 
@@ -143,7 +171,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       const res = await statementApi.confirm(req);
       setResult(res);
 
-      // Collect MFs that were actually imported or updated (not skipped) to offer SIP setup
       if (selectedMfs.size > 0) {
         const mfsForSip = (preview?.mfHoldings ?? []).filter(m => {
           const key = m.isin ?? m.schemeName;
@@ -159,7 +186,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
             initialSetups[m.isin ?? m.schemeName] = { enabled: false, amount: '', startDate: nextMonthStr };
           });
           setSipSetups(initialSetups);
-          setStep(3); // show result first, then user clicks "Set up SIPs →"
+          setStep(3);
         } else {
           setStep(3);
         }
@@ -324,10 +351,8 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
           </div>
         )}
 
-        {/* Step 2: Preview & Selection */}
         {step === 2 && preview && (
           <div className="space-y-4">
-            {/* Tabs */}
             <div className="border-b flex gap-4">
               <button
                 onClick={() => setSelectedTab('equities')}
@@ -351,7 +376,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </button>
             </div>
 
-            {/* Equities Table */}
             {selectedTab === 'equities' && (
               <div className="space-y-3">
                 <div className="overflow-x-auto">
@@ -361,7 +385,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
-                            checked={selectedEquities.size === preview.holdings.length}
+                            checked={selectableEquities.length > 0 && selectedEquities.size === selectableEquities.length}
                             onChange={toggleAllEquities}
                           />
                         </th>
@@ -376,17 +400,38 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     <tbody>
                       {preview.holdings.map(e => {
                         const eKey = e.isin ?? e.symbol;
+                        const isSkipManual = e.status === ImportStatus.SKIP_MANUAL;
+                        const isUpdate = e.status === ImportStatus.UPDATE;
                         return (
-                        <tr key={eKey} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+                        <tr key={eKey} className={`border-b dark:border-gray-700 ${
+                          isSkipManual
+                            ? 'opacity-50'
+                            : isUpdate
+                              ? 'bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}>
                           <td className="p-2">
                             <input
                               type="checkbox"
                               checked={selectedEquities.has(eKey)}
-                              onChange={() => toggleEquity(eKey)}
+                              disabled={isSkipManual}
+                              onChange={() => !isSkipManual && toggleEquity(eKey)}
                             />
                           </td>
                           <td className="p-2 font-mono text-xs">{e.isin ?? e.symbol}</td>
-                          <td className="p-2">{e.name}</td>
+                          <td className="p-2">
+                            <span>{e.name}</span>
+                            {isUpdate && (
+                              <span className="block text-xs text-amber-600 dark:text-amber-400">
+                                Already imported — tick to overwrite
+                              </span>
+                            )}
+                            {isSkipManual && (
+                              <span className="block text-xs text-neutral-400">
+                                Manual entry — protected
+                              </span>
+                            )}
+                          </td>
                           <td className="text-right p-2">{e.quantity}</td>
                           <td className="text-right p-2">₹{e.avgCost != null ? e.avgCost.toFixed(2) : '—'}</td>
                           <td className="text-right p-2 text-blue-600 dark:text-blue-400">{e.ltp != null ? `₹${e.ltp.toFixed(2)}` : '—'}</td>
@@ -413,7 +458,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </div>
             )}
 
-            {/* MFs Table */}
             {selectedTab === 'mfs' && (
               <div className="space-y-3">
                 <div className="overflow-x-auto">
@@ -423,7 +467,7 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                         <th className="text-left p-2 w-8">
                           <input
                             type="checkbox"
-                            checked={selectedMfs.size === preview.mfHoldings.length}
+                            checked={selectableMfs.length > 0 && selectedMfs.size === selectableMfs.length}
                             onChange={toggleAllMfs}
                           />
                         </th>
@@ -438,17 +482,38 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
                     <tbody>
                       {preview.mfHoldings.map(m => {
                         const mKey = m.isin ?? m.schemeName;
+                        const isSkipManual = m.status === ImportStatus.SKIP_MANUAL;
+                        const isUpdate = m.status === ImportStatus.UPDATE;
                         return (
-                        <tr key={mKey} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+                        <tr key={mKey} className={`border-b dark:border-gray-700 ${
+                          isSkipManual
+                            ? 'opacity-50'
+                            : isUpdate
+                              ? 'bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}>
                           <td className="p-2">
                             <input
                               type="checkbox"
                               checked={selectedMfs.has(mKey)}
-                              onChange={() => toggleMf(mKey)}
+                              disabled={isSkipManual}
+                              onChange={() => !isSkipManual && toggleMf(mKey)}
                             />
                           </td>
                           <td className="p-2 font-mono text-xs">{m.schemeCode ?? m.isin ?? '—'}</td>
-                          <td className="p-2">{m.schemeName}</td>
+                          <td className="p-2">
+                            <span>{m.schemeName}</span>
+                            {isUpdate && (
+                              <span className="block text-xs text-amber-600 dark:text-amber-400">
+                                Already imported — tick to overwrite
+                              </span>
+                            )}
+                            {isSkipManual && (
+                              <span className="block text-xs text-neutral-400">
+                                Manual entry — protected
+                              </span>
+                            )}
+                          </td>
                           <td className="text-right p-2">{m.units.toFixed(2)}</td>
                           <td className="text-right p-2">₹{m.avgCost != null ? m.avgCost.toFixed(2) : '—'}</td>
                           <td className="text-right p-2 text-blue-600 dark:text-blue-400">{m.nav != null ? `₹${m.nav.toFixed(2)}` : '—'}</td>
@@ -475,7 +540,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </div>
             )}
 
-            {/* Warnings */}
             {preview.warnings.length > 0 && (
               <details className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
                 <summary className="font-medium text-amber-900 dark:text-amber-300 cursor-pointer">
@@ -489,7 +553,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
               </details>
             )}
 
-            {/* Actions */}
             <div className="flex justify-between gap-2 pt-4">
               <Button variant="outline" onClick={() => setStep(1)}>
                 Back
@@ -505,7 +568,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
           </div>
         )}
 
-        {/* Step 3: Result */}
         {step === 3 && result && (
           <div className="space-y-4">
             <div className="p-4 bg-green-50 border border-green-200 rounded dark:bg-green-900/20 dark:border-green-700">
@@ -553,7 +615,6 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
           </div>
         )}
 
-        {/* Step 4: SIP setup for imported MFs */}
         {step === 4 && (
           <div className="space-y-4">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">

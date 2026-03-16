@@ -55,4 +55,9 @@ export const investmentApi = {
     const response = await apiClient.post(`${BASE_PATH}/${id}/sell-units`, { quantity, price });
     return response.status === 204 ? null : response.data;
   },
+
+  bulkDelete: async (ids: number[]): Promise<{ deleted: number }> => {
+    const response = await apiClient.delete(`${BASE_PATH}/bulk`, { data: { ids } });
+    return response.data;
+  },
 };

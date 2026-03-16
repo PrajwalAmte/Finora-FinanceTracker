@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loans")
@@ -53,6 +54,13 @@ public class LoanController {
     public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
         loanService.deleteLoan(id);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteLoans(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.getOrDefault("ids", List.of());
+        int deleted = loanService.bulkDelete(ids);
+        return ResponseEntity.ok(Map.of("deleted", deleted));
     }
 
     @GetMapping("/summary")

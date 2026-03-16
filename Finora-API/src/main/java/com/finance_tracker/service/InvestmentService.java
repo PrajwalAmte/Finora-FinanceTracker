@@ -270,4 +270,19 @@ public class InvestmentService {
         snap.setImportSource(src.getImportSource());
         return snap;
     }
+
+    @Transactional
+    public int bulkDelete(List<Long> ids) {
+        Long userId = resolveUserId();
+        int count = 0;
+        for (Long id : ids) {
+            Investment inv = investmentRepository.findById(id).orElse(null);
+            if (inv == null) continue;
+            validateOwnership(inv.getUserId(), userId);
+            investmentRepository.deleteById(id);
+            ledgerService.recordEvent("INVESTMENT", String.valueOf(id), "DELETE", inv, null, String.valueOf(userId));
+            count++;
+        }
+        return count;
+    }
 }

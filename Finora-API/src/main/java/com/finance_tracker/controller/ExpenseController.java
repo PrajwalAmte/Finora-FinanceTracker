@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -63,6 +64,24 @@ public class ExpenseController {
     public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
         expenseService.deleteExpense(id);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteExpenses(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.getOrDefault("ids", List.of());
+        int deleted = expenseService.bulkDelete(ids);
+        return ResponseEntity.ok(Map.of("deleted", deleted));
+    }
+
+    @PutMapping("/bulk")
+    public ResponseEntity<Map<String, Integer>> bulkUpdateExpenses(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Number> rawIds = (List<Number>) body.getOrDefault("ids", List.of());
+        List<Long> ids = rawIds.stream().map(Number::longValue).toList();
+        String category = (String) body.get("category");
+        String paymentMethod = (String) body.get("paymentMethod");
+        int updated = expenseService.bulkUpdate(ids, category, paymentMethod);
+        return ResponseEntity.ok(Map.of("updated", updated));
     }
 
     @GetMapping("/by-date-range")

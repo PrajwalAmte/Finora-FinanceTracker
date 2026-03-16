@@ -184,5 +184,20 @@ public class LoanService {
 
         return currentBalance.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
     }
+
+    @Transactional
+    public int bulkDelete(List<Long> ids) {
+        Long userId = resolveUserId();
+        int count = 0;
+        for (Long id : ids) {
+            Loan loan = loanRepository.findById(id).orElse(null);
+            if (loan == null) continue;
+            validateOwnership(loan.getUserId(), userId);
+            loanRepository.deleteById(id);
+            ledgerService.recordEvent("LOAN", String.valueOf(id), "DELETE", loan, null, String.valueOf(userId));
+            count++;
+        }
+        return count;
+    }
 }
 

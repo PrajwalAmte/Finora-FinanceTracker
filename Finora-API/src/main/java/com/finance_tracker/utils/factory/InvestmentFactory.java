@@ -5,6 +5,7 @@ import com.finance_tracker.model.Investment;
 import com.finance_tracker.model.InvestmentType;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Component
@@ -18,9 +19,9 @@ public class InvestmentFactory {
         investment.setQuantity(dto.getQuantity());
         investment.setPurchasePrice(dto.getPurchasePrice());
         investment.setPurchaseDate(dto.getPurchaseDate() != null ? dto.getPurchaseDate() : LocalDate.now());
-        if (investment.getCurrentPrice() == null) {
-            investment.setCurrentPrice(investment.getPurchasePrice());
-        }
+        BigDecimal cp = dto.getCurrentPrice();
+        investment.setCurrentPrice(
+                cp != null && cp.compareTo(BigDecimal.ZERO) > 0 ? cp : dto.getPurchasePrice());
         return investment;
     }
 }

@@ -41,4 +41,9 @@ export const sipApi = {
   refreshNavs: async (): Promise<void> => {
     await apiClient.post('/investments/refresh-prices');
   },
+
+  bulkDelete: async (ids: number[]): Promise<{ deleted: number }> => {
+    const response = await apiClient.delete(`${BASE_PATH}/bulk`, { data: { ids } });
+    return response.data;
+  },
 };

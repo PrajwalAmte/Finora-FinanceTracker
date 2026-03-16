@@ -32,7 +32,6 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
     purchaseDate: new Date().toISOString().split('T')[0],
   });
 
-  // MF fund search state
   const [fundQuery, setFundQuery] = useState('');
   const [fundResults, setFundResults] = useState<{ schemeCode: string; name: string; nav: number }[]>([]);
   const [showFundDropdown, setShowFundDropdown] = useState(false);
@@ -83,9 +82,8 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
     e.preventDefault();
     const quantity = parseFloat(formData.quantity);
     const purchasePrice = parseFloat(formData.purchasePrice);
-    const currentPrice = parseFloat(formData.currentPrice);
-    if ([quantity, purchasePrice, currentPrice].some((n) => isNaN(n) || n <= 0)) {
-      toast.error('Quantity and prices must be positive numbers');
+    if ([quantity, purchasePrice].some((n) => isNaN(n) || n <= 0)) {
+      toast.error('Quantity and purchase price must be positive numbers');
       return;
     }
     if (!formData.type) {
@@ -96,6 +94,8 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
       toast.error('Please select a fund from the search results');
       return;
     }
+    const rawCurrentPrice = parseFloat(formData.currentPrice);
+    const currentPrice = (!isNaN(rawCurrentPrice) && rawCurrentPrice > 0) ? rawCurrentPrice : purchasePrice;
     onSubmit({
       ...formData,
       quantity,
@@ -201,21 +201,27 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
         fullWidth
       />
       
-      <Input
-        type="number"
-        label="Current Price"
-        value={formData.currentPrice}
-        onChange={(e) => setFormData({ ...formData, currentPrice: e.target.value })}
-        required
-        fullWidth
-      />
-      
+      <div>
+        <Input
+          type="number"
+          label="Current Price (optional)"
+          value={formData.currentPrice}
+          onChange={(e) => setFormData({ ...formData, currentPrice: e.target.value })}
+          fullWidth
+          placeholder="Leave blank to use purchase price"
+        />
+        {formData.type !== 'MUTUAL_FUND' && formData.type !== 'FIXED_DEPOSIT' && (
+          <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+            Leave blank — use &quot;Refresh Prices&quot; to fetch live market prices automatically.
+          </p>
+        )}
+      </div>
+
       <Input
         type="date"
-        label="Purchase Date"
+        label="Purchase Date (optional)"
         value={formData.purchaseDate}
         onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-        required
         fullWidth
       />
       

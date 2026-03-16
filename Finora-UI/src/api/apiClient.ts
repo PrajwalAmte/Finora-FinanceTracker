@@ -20,7 +20,6 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Inject vault key if present (stored in sessionStorage for security)
     const vaultKey = sessionStorage.getItem(VAULT_KEY_STORAGE);
     if (vaultKey) {
       config.headers['X-Vault-Key'] = vaultKey;
@@ -41,7 +40,6 @@ apiClient.interceptors.response.use(
     } else {
       const status = error.response.status;
       if (status === 401) {
-        // Clear stale session and redirect to login
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("auth_user");
         if (!window.location.pathname.startsWith("/login")) {
@@ -49,12 +47,9 @@ apiClient.interceptors.response.use(
         }
       } else if (status === 403) {
         toast.error("Forbidden.");
-      } else if (status === 404) {
-        toast.error("Not found.");
       } else if (status === 500) {
         toast.error("Server error - try again later.");
       } else if (status !== 400) {
-        // 400 errors have field-level messages handled by the caller
         toast.error(`API Error (${status})`);
       }
     }

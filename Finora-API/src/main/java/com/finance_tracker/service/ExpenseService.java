@@ -136,4 +136,44 @@ public class ExpenseService {
 
         return total.divide(new BigDecimal("6"), 2, java.math.RoundingMode.HALF_UP);
     }
+
+    @Transactional
+    public int bulkDelete(List<Long> ids) {
+        Long userId = resolveUserId();
+        int count = 0;
+        for (Long id : ids) {
+            Expense expense = expenseRepository.findById(id).orElse(null);
+            if (expense == null) continue;
+            validateOwnership(expense.getUserId(), userId);
+            expenseRepository.deleteById(id);
+            ledgerService.recordEvent("EXPENSE", String.valueOf(id), "DELETE", expense, null, String.valueOf(userId));
+            count++;
+        }
+        return count;
+    }
+
+    @Transactional
+    public int bulkUpdate(List<Long> ids, String category, String paymentMethod) {
+        Long userId = resolveUserId();
+        int count = 0;
+        for (Long id : ids) {
+            Expense expense = expenseRepository.findById(id).orElse(null);
+            if (expense == null) continue;
+            validateOwnership(expense.getUserId(), userId);
+            Expense before = new Expense();
+            before.setId(expense.getId());
+            before.setDescription(expense.getDescription());
+            before.setAmount(expense.getAmount());
+            before.setDate(expense.getDate());
+            before.setCategory(expense.getCategory());
+            before.setPaymentMethod(expense.getPaymentMethod());
+            before.setUserId(expense.getUserId());
+            if (category != null && !category.isBlank()) expense.setCategory(category);
+            if (paymentMethod != null && !paymentMethod.isBlank()) expense.setPaymentMethod(paymentMethod);
+            expenseRepository.save(expense);
+            ledgerService.recordEvent("EXPENSE", String.valueOf(id), "UPDATE", before, expense, String.valueOf(userId));
+            count++;
+        }
+        return count;
+    }
 }

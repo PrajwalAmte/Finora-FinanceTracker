@@ -65,6 +65,13 @@ public class InvestmentController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteInvestments(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.getOrDefault("ids", List.of());
+        int deleted = investmentService.bulkDelete(ids);
+        return ResponseEntity.ok(Map.of("deleted", deleted));
+    }
+
     @GetMapping("/summary")
     public InvestmentSummaryDTO getInvestmentSummary() {
         var sipLinkedIds = sipService.getLinkedInvestmentIds();

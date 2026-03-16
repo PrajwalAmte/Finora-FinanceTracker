@@ -31,5 +31,10 @@ export const loanApi = {
   getSummary: async (): Promise<LoanSummary> => {
     const response = await apiClient.get(`${BASE_PATH}/summary`);
     return response.data;
-  }
+  },
+
+  bulkDelete: async (ids: number[]): Promise<{ deleted: number }> => {
+    const response = await apiClient.delete(`${BASE_PATH}/bulk`, { data: { ids } });
+    return response.data;
+  },
 };
