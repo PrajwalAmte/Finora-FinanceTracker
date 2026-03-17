@@ -27,6 +27,7 @@ export const SipActions: React.FC<SipActionsProps> = ({
       onUpdate(updatedSip);
       setIsEditing(false);
     } catch {
+      // handled by API error interceptor
     } finally {
       setIsLoading(false);
     }
@@ -40,6 +41,7 @@ export const SipActions: React.FC<SipActionsProps> = ({
       await sipApi.delete(sip.id);
       onDelete(sip.id);
     } catch {
+      // handled by API error interceptor
     } finally {
       setIsLoading(false);
     }

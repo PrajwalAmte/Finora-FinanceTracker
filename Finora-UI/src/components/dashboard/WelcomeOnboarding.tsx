@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
@@ -8,7 +8,6 @@ import {
   Upload,
   Shield,
   ArrowRight,
-  CheckCircle2,
   X,
 } from 'lucide-react';
 import { Button } from '../ui/Button';

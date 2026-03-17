@@ -12,7 +12,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { Investment, InvestmentSummary } from '../types/Investment';
 import { investmentApi } from '../api/investmentApi';
-import { formatCurrency, formatDate, formatPercentage, getStatusColorClass } from '../utils/formatters';
+import { formatCurrency, formatPercentage, getStatusColorClass } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { generateInvestmentReport } from '../utils/excel-generator';
 import { toast } from '../utils/notifications';

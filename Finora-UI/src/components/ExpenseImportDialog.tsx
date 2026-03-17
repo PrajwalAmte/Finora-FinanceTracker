@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Select } from './ui/Select';
-import { Input } from './ui/Input';
 import { Badge } from './ui/Badge';
 import expenseImportApi, {
   ParsedTransaction,
@@ -10,6 +9,7 @@ import expenseImportApi, {
   ExpenseImportResult,
 } from '../api/expenseImportApi';
 import { toast } from '../utils/notifications';
+import axios from 'axios';
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../constants';
 import { formatCurrency } from '../utils/formatters';
 
@@ -71,8 +71,11 @@ export function ExpenseImportDialog({ isOpen, onClose }: ExpenseImportDialogProp
       if (data.warnings.length > 0) {
         toast.info(`${data.warnings.length} warnings during parse`);
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to parse statement');
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.message ?? err.message)
+        : err instanceof Error ? err.message : 'Failed to parse statement';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -128,8 +131,11 @@ export function ExpenseImportDialog({ isOpen, onClose }: ExpenseImportDialogProp
       const res = await expenseImportApi.confirm(entries);
       setResult(res);
       setStep(3);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Import failed');
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.message ?? err.message)
+        : err instanceof Error ? err.message : 'Import failed';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

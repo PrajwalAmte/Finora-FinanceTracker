@@ -6,8 +6,16 @@ import { Expense } from '../../types/Expense';
 import { toast } from '../../utils/notifications';
 import { PAYMENT_METHODS, EXPENSE_CATEGORIES } from '../../constants';
 
+interface ExpenseFormData {
+  description: string;
+  amount: string;
+  date: string;
+  category: string;
+  paymentMethod: string;
+}
+
 interface ExpenseFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ExpenseFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
   initialData?: Expense;

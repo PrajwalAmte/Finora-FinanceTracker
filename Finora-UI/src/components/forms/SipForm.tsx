@@ -7,8 +7,19 @@ import { investmentApi } from '../../api/investmentApi';
 import { toast } from '../../utils/notifications';
 import { Link2, Link2Off } from 'lucide-react';
 
+interface SipFormData {
+  name: string;
+  schemeCode: string;
+  monthlyAmount: string;
+  startDate: string;
+  currentNav: string;
+  totalUnits: string;
+  totalInvested: string;
+  investmentId: number | undefined;
+}
+
 interface SipFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: SipFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
   initialData?: Sip;

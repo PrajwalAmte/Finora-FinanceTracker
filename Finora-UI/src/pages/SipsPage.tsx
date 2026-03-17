@@ -147,6 +147,7 @@ export const SipsPage: React.FC = () => {
       setSips(prev => [...prev, newSip]);
       setIsAddDialogOpen(false);
     } catch {
+      // handled by API error interceptor
     } finally {
       setIsSubmitting(false);
     }

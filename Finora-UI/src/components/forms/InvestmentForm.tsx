@@ -7,8 +7,18 @@ import { investmentApi } from '../../api/investmentApi';
 import { toast } from '../../utils/notifications';
 import { INVESTMENT_TYPES } from '../../constants';
 
+interface InvestmentFormData {
+  name: string;
+  symbol: string;
+  type: string;
+  quantity: string;
+  purchasePrice: string;
+  currentPrice: string;
+  purchaseDate: string;
+}
+
 interface InvestmentFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: InvestmentFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
   initialData?: Investment;

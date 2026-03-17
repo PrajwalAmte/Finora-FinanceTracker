@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Input } from './ui/Input';
-import { Select } from './ui/Select';
 import { Badge } from './ui/Badge';
 import statementApi, {
   StatementPreviewResponse,
@@ -12,6 +11,7 @@ import statementApi, {
   ParsedMFHolding,
 } from '../api/statementApi';
 import { sipApi } from '../api/sipApi';
+import axios from 'axios';
 import { toast } from '../utils/notifications';
 
 type StatementType = 'CAS' | 'CAMS' | 'HOLDINGS_FILE';
@@ -112,8 +112,11 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       if (data.warnings.length > 0) {
         toast.info(`${data.warnings.length} warnings during parse`);
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Parse failed');
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.message ?? err.message)
+        : err instanceof Error ? err.message : 'Parse failed';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -121,13 +124,13 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
 
   const toggleEquity = (key: string) => {
     const next = new Set(selectedEquities);
-    next.has(key) ? next.delete(key) : next.add(key);
+    if (next.has(key)) { next.delete(key); } else { next.add(key); }
     setSelectedEquities(next);
   };
 
   const toggleMf = (key: string) => {
     const next = new Set(selectedMfs);
-    next.has(key) ? next.delete(key) : next.add(key);
+    if (next.has(key)) { next.delete(key); } else { next.add(key); }
     setSelectedMfs(next);
   };
 
@@ -193,8 +196,11 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
       } else {
         setStep(3);
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Import failed');
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.message ?? err.message)
+        : err instanceof Error ? err.message : 'Import failed';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -240,9 +246,9 @@ export function StatementUploadDialog({ isOpen, onClose }: StatementUploadDialog
           totalUnits: m.units,
           isin: m.isin,
           importSource: getBackendType(statementType, file?.name ?? ''),
-        } as any);
+        });
         created++;
-      } catch (e) {
+      } catch {
         toast.error(`Failed to create SIP for ${m.schemeName}`);
       }
     }

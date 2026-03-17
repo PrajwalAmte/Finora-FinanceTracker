@@ -22,10 +22,10 @@ public class JwtService {
     private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
     @Value("${jwt.secret}")
-    private String SECRET_KEY;
+    private String secretKey;
 
     private Key getSigningKey() {
-        byte[] keyBytes = SECRET_KEY.getBytes();
+        byte[] keyBytes = secretKey.getBytes();
         if (keyBytes.length < 32) {
             logger.warn("JWT secret key is too short. Recommended: at least 32 bytes (256 bits)");
         }

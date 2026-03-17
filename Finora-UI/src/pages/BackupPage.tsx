@@ -18,6 +18,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { backupApi, BackupMetadata } from '../api/backupApi';
+import axios from 'axios';
 import { toast } from '../utils/notifications';
 import { formatDate } from '../utils/formatters';
 
@@ -56,8 +57,11 @@ const ExportSection: React.FC = () => {
       toast.success('Backup exported successfully');
       setPassword('');
       setConfirmPassword('');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to export backup');
+    } catch (error: unknown) {
+      const msg = axios.isAxiosError(error)
+        ? (error.response?.data?.message ?? error.message)
+        : error instanceof Error ? error.message : 'Failed to export backup';
+      toast.error(msg);
     } finally {
       setIsExporting(false);
     }
@@ -193,9 +197,10 @@ const ImportSection: React.FC = () => {
       setPassword('');
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.message || error?.message || 'Failed to import backup';
+    } catch (error: unknown) {
+      const msg = axios.isAxiosError(error)
+        ? (error.response?.data?.message ?? error.message)
+        : error instanceof Error ? error.message : 'Failed to import backup';
       toast.error(msg);
     } finally {
       setIsImporting(false);

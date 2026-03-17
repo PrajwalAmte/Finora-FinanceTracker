@@ -14,7 +14,7 @@ import { useTheme } from '../../utils/theme-context';
 interface DataItem {
   name: string;
   value: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface BarChartProps {
@@ -59,7 +59,19 @@ export const BarChart: React.FC<BarChartProps> = ({
   }
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipEntry {
+    name: string;
+    value: number;
+    color: string;
+  }
+
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: TooltipEntry[];
+    label?: string;
+  }
+
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div style={{
@@ -71,7 +83,7 @@ export const BarChart: React.FC<BarChartProps> = ({
           maxWidth: 240,
         }}>
           <p style={{ margin: 0, fontWeight: 600, color: tooltipText, fontSize: 14 }}>{label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry: TooltipEntry, index: number) => (
             <p key={`tooltip-${index}`} style={{ margin: '4px 0 0', color: entry.color, fontSize: 13 }}>
               {entry.name}: ₹{entry.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>

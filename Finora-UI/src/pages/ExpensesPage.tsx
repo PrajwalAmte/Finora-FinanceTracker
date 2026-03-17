@@ -31,7 +31,7 @@ export const ExpensesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [paymentMethodFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();

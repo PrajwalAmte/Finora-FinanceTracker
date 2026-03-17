@@ -96,8 +96,11 @@ public class FieldEncryptionService {
         if (ciphertext == null || ciphertext.isEmpty()) {
             return ciphertext;
         }
+        if (!isEnabled()) {
+            return ciphertext;
+        }
         if (!isEncrypted(ciphertext)) {
-            return ciphertext; // Not encrypted, return as-is
+            return ciphertext;
         }
 
         try {

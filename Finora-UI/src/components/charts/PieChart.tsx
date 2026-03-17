@@ -60,7 +60,16 @@ export const PieChart: React.FC<PieChartProps> = ({
 
   const total = filteredData.reduce((sum, d) => sum + d.value, 0);
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface PieTooltipEntry {
+    payload: { name: string; value: number };
+  }
+
+  interface PieTooltipProps {
+    active?: boolean;
+    payload?: PieTooltipEntry[];
+  }
+
+  const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
     if (!active || !payload?.length) return null;
     const item = payload[0].payload;
     return (
@@ -83,7 +92,16 @@ export const PieChart: React.FC<PieChartProps> = ({
     );
   };
 
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  interface PieLabelProps {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    percent: number;
+  }
+
+  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: PieLabelProps) => {
     if (percent < 0.06) return null;
     const RADIAN = Math.PI / 180;
     const r = innerRadius + (outerRadius - innerRadius) * 0.55;

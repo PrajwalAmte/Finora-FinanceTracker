@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, TrendingUp, CreditCard, Receipt, PiggyBank, ArrowRight } from 'lucide-react';
 import { expenseApi } from '../../api/expenseApi';

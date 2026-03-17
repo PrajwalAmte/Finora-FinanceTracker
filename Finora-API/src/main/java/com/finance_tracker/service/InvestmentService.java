@@ -57,7 +57,7 @@ public class InvestmentService {
         if (normalized.matches("\\d+")) {
             return normalized;
         }
-        if (normalized.matches("IN[A-Z]{2}[A-Z0-9]{9}\\d")) {
+        if (normalized.matches("IN[A-Z0-9]{9}\\d")) {
             return normalized;
         }
         return normalized + ".NS";

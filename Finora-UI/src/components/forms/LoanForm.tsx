@@ -6,8 +6,19 @@ import { Loan } from '../../types/Loan';
 import { toast } from '../../utils/notifications';
 import { INTEREST_TYPES, COMPOUNDING_FREQUENCIES } from '../../constants';
 
+interface LoanFormData {
+  name: string;
+  principalAmount: string;
+  interestRate: string;
+  interestType: string;
+  compoundingFrequency: string;
+  startDate: string;
+  tenureMonths: string;
+  currentBalance: string;
+}
+
 interface LoanFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: LoanFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
   initialData?: Loan;

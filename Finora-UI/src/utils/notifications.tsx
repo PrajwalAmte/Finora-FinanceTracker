@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 
 type Toast = { id: number; type: 'error' | 'success' | 'info'; message: string };
 
