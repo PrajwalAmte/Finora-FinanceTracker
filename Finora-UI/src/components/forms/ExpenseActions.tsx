@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
-import { expenseApi } from '../../api/expenseApi';
+import { useExpenseApi } from '../../utils/data-context';
 import { Expense } from '../../types/Expense';
 import { ExpenseForm } from './ExpenseForm';
 
@@ -16,6 +16,7 @@ export const ExpenseActions: React.FC<ExpenseActionsProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const expenseApi = useExpenseApi();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 

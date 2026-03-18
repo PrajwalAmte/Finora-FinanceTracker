@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
-import { loanApi } from '../../api/loanApi';
+import { useLoanApi } from '../../utils/data-context';
 import { Loan } from '../../types/Loan';
 import { LoanForm } from './LoanForm';
 
@@ -16,6 +16,7 @@ export const LoanActions: React.FC<LoanActionsProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const loanApi = useLoanApi();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 

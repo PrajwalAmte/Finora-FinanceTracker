@@ -10,7 +10,7 @@ import { LoanActions } from '../components/forms/LoanActions';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { Loan, LoanSummary } from '../types/Loan';
-import { loanApi } from '../api/loanApi';
+import { useLoanApi } from '../utils/data-context';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { BarChart } from '../components/charts/BarChart';
@@ -23,6 +23,7 @@ type SortKey = 'name' | 'principalAmount' | 'interestRate' | 'emiAmount' | 'star
 type SortDir = 'asc' | 'desc';
 
 export const LoansPage: React.FC = () => {
+  const loanApi = useLoanApi();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [summary, setSummary] = useState<LoanSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);

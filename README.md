@@ -1,6 +1,6 @@
 # Finora - Personal Finance Tracker
 
-A full-stack personal finance management application for tracking investments, mutual funds, loans, SIPs, and expenses. Features statement import from broker and CAMS/CAS PDFs, a tamper-evident audit ledger, optional client-side data encryption via a personal vault, and encrypted backup/restore.
+A full-stack personal finance management application for tracking investments, mutual funds, loans, SIPs, and expenses. Features statement import from broker and CAMS/CAS PDFs, a tamper-evident audit ledger, optional client-side data encryption via a personal vault, encrypted backup/restore, and an **offline-first local vault mode** that keeps all data in an AES-256-GCM encrypted file on your device — no account or server required.
 
 **Live application:** https://finora-financetracker.up.railway.app/
 
@@ -129,7 +129,67 @@ graph TB
 
 ### Frontend
 
-React 18 with TypeScript, built with Vite and styled with Tailwind CSS. Served as a static SPA from nginx. All API calls go through the nginx proxy at `/api/`.
+React 18 with TypeScript, built with Vite and styled with Tailwind CSS. Served as a static SPA from nginx. In cloud mode, all API calls go through the nginx proxy at `/api/`. In local vault mode, the same UI operates entirely in the browser with no network requests.
+
+### Dual-Mode Data Flow
+
+The frontend uses a **DataProvider abstraction layer** so every page works identically in both modes. Each domain has a React hook (e.g. `useExpenseApi()`) that returns either the real REST client or an in-memory local implementation — pages never know which mode is active.
+
+```mermaid
+flowchart TB
+    subgraph UI["UI Layer — Pages & Components"]
+        Dashboard[Dashboard]
+        Investments[Investments]
+        SIPs[SIPs]
+        Loans[Loans]
+        Expenses[Expenses]
+    end
+
+    subgraph Hooks["DataProvider Hooks"]
+        useExpenseApi["useExpenseApi()"]
+        useInvestmentApi["useInvestmentApi()"]
+        useSipApi["useSipApi()"]
+        useLoanApi["useLoanApi()"]
+        useSummaryApi["useSummaryApi()"]
+    end
+
+    subgraph Cloud["Cloud Mode Path"]
+        AxiosClient["Axios HTTP Client"]
+        NginxProxy["nginx /api/* proxy"]
+        SpringBoot["Spring Boot API"]
+        PostgreSQL[(PostgreSQL)]
+    end
+
+    subgraph Local["Local Vault Mode Path"]
+        VaultCtx["LocalVaultContext\n(React state)"]
+        IDB[("IndexedDB\n(draft persistence)")]
+        FSA["File System Access API\nor download fallback"]
+        EncFile["🔒 .enc file\nAES-256-GCM + PBKDF2"]
+    end
+
+    Dashboard & Investments & SIPs & Loans & Expenses --> Hooks
+
+    useExpenseApi & useInvestmentApi & useSipApi & useLoanApi & useSummaryApi -->|"isLocalMode = false"| AxiosClient
+    useExpenseApi & useInvestmentApi & useSipApi & useLoanApi & useSummaryApi -->|"isLocalMode = true"| VaultCtx
+
+    AxiosClient --> NginxProxy --> SpringBoot --> PostgreSQL
+
+    VaultCtx -->|auto-save draft| IDB
+    VaultCtx -->|save / open| FSA
+    FSA <-->|read / write| EncFile
+
+    classDef ui fill:#e1f5fe,color:#000
+    classDef hook fill:#fff3e0,color:#000
+    classDef cloud fill:#f3e5f5,color:#000
+    classDef local fill:#e8f5e9,color:#000
+    classDef file fill:#fce4ec,color:#000
+
+    class Dashboard,Investments,SIPs,Loans,Expenses ui
+    class useExpenseApi,useInvestmentApi,useSipApi,useLoanApi,useSummaryApi hook
+    class AxiosClient,NginxProxy,SpringBoot,PostgreSQL cloud
+    class VaultCtx,IDB,FSA local
+    class EncFile file
+```
 
 ### Backend
 
@@ -198,6 +258,16 @@ Tables: `users`, `expenses`, `investments`, `loans`, `sips`, `ledger_events`
 
 **Excel reports**
 - Per-section Excel exports for investments, expenses, loans, and SIPs
+
+**Local vault mode (offline)**
+- No account or server connection required — works entirely in the browser
+- All data stored in a single AES-256-GCM encrypted `.enc` file on your device
+- Encryption uses PBKDF2 key derivation (310,000 iterations) from a user-chosen passphrase
+- Draft changes auto-persist to IndexedDB so nothing is lost if the tab closes
+- Save vault uses the File System Access API (Chrome/Edge) for in-place file writes, with a download fallback for Firefox/Safari
+- Cloud backups can be opened as local vaults and vice versa
+- Server-only features (statement import, price refresh, NAV refresh) are automatically hidden in local mode
+- Landing page at `/welcome` lets users choose between Cloud Mode and Local Vault
 
 **Global search**
 - Keyboard-accessible search across all investments, expenses, loans, and SIPs
@@ -391,6 +461,7 @@ Stock price updates are triggered on demand (via the refresh-prices endpoint or 
 - Login is rate-limited to 5 attempts per minute per IP address
 - Field-level encryption uses AES-256-GCM with PBKDF2 key derivation (310,000 iterations)
 - The vault adds a second AES-256-GCM encryption layer keyed from the user's passphrase — the passphrase is never stored anywhere
+- Local vault mode uses client-side AES-256-GCM (WebCrypto API) with PBKDF2 (310,000 iterations, SHA-256) — encryption and decryption happen entirely in the browser; the passphrase never leaves the device
 - The ledger is protected by an append-only trigger in PostgreSQL; events cannot be updated or deleted at the database level
 - Sensitive fields (investment names, expense descriptions, user email) are encrypted at rest when `FIELD_ENCRYPTION_KEY` is configured
 

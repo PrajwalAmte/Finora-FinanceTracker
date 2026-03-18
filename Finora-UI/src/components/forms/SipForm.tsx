@@ -3,7 +3,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Sip } from '../../types/Sip';
 import { Investment } from '../../types/Investment';
-import { investmentApi } from '../../api/investmentApi';
+import { useInvestmentApi } from '../../utils/data-context';
 import { toast } from '../../utils/notifications';
 import { Link2, Link2Off } from 'lucide-react';
 
@@ -33,6 +33,7 @@ export const SipForm: React.FC<SipFormProps> = ({
   initialData,
   mode = 'create',
 }) => {
+  const investmentApi = useInvestmentApi();
   const defaultNextInstallment = () => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);

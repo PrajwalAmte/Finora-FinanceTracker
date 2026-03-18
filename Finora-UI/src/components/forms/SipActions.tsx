@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
-import { sipApi } from '../../api/sipApi';
+import { useSipApi } from '../../utils/data-context';
 import { Sip } from '../../types/Sip';
 import { SipForm } from './SipForm';
 
@@ -16,6 +16,7 @@ export const SipActions: React.FC<SipActionsProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const sipApi = useSipApi();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 

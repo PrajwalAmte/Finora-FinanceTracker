@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Dialog } from '../ui/Dialog';
-import { investmentApi } from '../../api/investmentApi';
+import { useInvestmentApi } from '../../utils/data-context';
 import { Investment } from '../../types/Investment';
 import { InvestmentForm } from './InvestmentForm';
 import { toast } from '../../utils/notifications';
@@ -20,6 +20,7 @@ export const InvestmentActions: React.FC<InvestmentActionsProps> = ({
   onUpdate,
   onDelete,
 }) => {
+  const investmentApi = useInvestmentApi();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>('edit');
   const [isLoading, setIsLoading] = useState(false);

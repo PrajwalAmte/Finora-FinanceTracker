@@ -12,7 +12,7 @@ import { ExpenseImportDialog } from '../components/ExpenseImportDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { Expense, ExpenseSummary } from '../types/Expense';
-import { expenseApi } from '../api/expenseApi';
+import { useExpenseApi, useIsLocalMode } from '../utils/data-context';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { BarChart } from '../components/charts/BarChart';
@@ -26,6 +26,8 @@ type SortKey = 'description' | 'date' | 'category' | 'paymentMethod' | 'amount';
 type SortDir = 'asc' | 'desc';
 
 export const ExpensesPage: React.FC = () => {
+  const expenseApi = useExpenseApi();
+  const isLocalMode = useIsLocalMode();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -286,7 +288,7 @@ export const ExpensesPage: React.FC = () => {
         </div>
         <div className="sm:col-span-3 flex items-end gap-2">
           <Button variant="outline" iconLeft={<Download size={18} />} onClick={handleExportExcel} fullWidth>Export</Button>
-          <Button variant="outline" iconLeft={<Upload size={18} />} fullWidth onClick={() => setIsImportDialogOpen(true)}>Import</Button>
+          {!isLocalMode && <Button variant="outline" iconLeft={<Upload size={18} />} fullWidth onClick={() => setIsImportDialogOpen(true)}>Import</Button>}
           <Button iconLeft={<Plus size={18} />} fullWidth onClick={() => { setFormKey(prev => prev + 1); setIsAddDialogOpen(true); }}>Add</Button>
         </div>
       </div>
@@ -413,7 +415,7 @@ export const ExpensesPage: React.FC = () => {
         </div>
       </Dialog>
 
-      <ExpenseImportDialog isOpen={isImportDialogOpen} onClose={handleImportClose} />
+      {!isLocalMode && <ExpenseImportDialog isOpen={isImportDialogOpen} onClose={handleImportClose} />}
     </div>
   );
 };

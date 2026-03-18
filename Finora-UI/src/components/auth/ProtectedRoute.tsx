@@ -2,9 +2,15 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { DollarSign } from 'lucide-react';
 import { useAuth } from '../../utils/auth-context';
+import { useLocalVault } from '../../utils/local-vault-context';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isLocalMode } = useLocalVault();
+
+  if (isLocalMode) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
@@ -18,7 +24,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/welcome" replace />;
   }
 
   return <>{children}</>;

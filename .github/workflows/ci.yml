@@ -15,7 +15,7 @@ jobs:
 
   # ── 1. Backend: tests + JaCoCo coverage enforcement (≥ 85 % instruction) ────
   api-test-coverage:
-    name: API – Tests & Coverage
+    name: API – Build, Test & Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -53,7 +53,7 @@ jobs:
             echo "[Full report](../artifacts/jacoco-report/index.html)" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # ── 2. Backend: Checkstyle (naming = error, style = warning) ─────────────
+  # ── 2. Backend: Checkstyle (naming = error, style = warning) 
   api-lint:
     name: API – Checkstyle
     runs-on: ubuntu-latest
@@ -72,7 +72,7 @@ jobs:
         working-directory: Finora-API
         run: mvn checkstyle:check --no-transfer-progress
 
-  # ── 3. Frontend: ESLint + TypeScript type check ───────────────────────────
+  # ── 3. Frontend: ESLint + TypeScript type check 
   ui-lint:
     name: UI – ESLint & TypeScript
     runs-on: ubuntu-latest

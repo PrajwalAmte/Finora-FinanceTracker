@@ -3,7 +3,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Investment } from '../../types/Investment';
-import { investmentApi } from '../../api/investmentApi';
+import { useInvestmentApi } from '../../utils/data-context';
 import { toast } from '../../utils/notifications';
 import { INVESTMENT_TYPES } from '../../constants';
 
@@ -32,6 +32,7 @@ export const InvestmentForm: React.FC<InvestmentFormProps> = ({
   initialData,
   mode = 'create',
 }) => {
+  const investmentApi = useInvestmentApi();
   const [formData, setFormData] = useState({
     name: '',
     symbol: '',

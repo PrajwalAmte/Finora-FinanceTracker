@@ -7,10 +7,12 @@ import { PieChart } from '../components/charts/PieChart';
 import { Button } from '../components/ui/Button';
 import { DateRangePicker, DateRange, DatePreset } from '../components/ui/DateRangePicker';
 import { WelcomeOnboarding, QuickActions } from '../components/dashboard/WelcomeOnboarding';
-import { summaryApi, ComprehensiveFinanceSummary } from '../api/summaryApi';
+import { ComprehensiveFinanceSummary } from '../api/summaryApi';
+import { useSummaryApi } from '../utils/data-context';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const summaryApi = useSummaryApi();
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);

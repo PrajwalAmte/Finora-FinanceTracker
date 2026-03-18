@@ -11,7 +11,7 @@ import { StatementUploadDialog } from '../components/StatementUploadDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { Sip, SipSummary } from '../types/Sip';
-import { sipApi } from '../api/sipApi';
+import { useSipApi, useIsLocalMode } from '../utils/data-context';
 import { formatCurrency, formatDate, getStatusColorClass, formatPercentage } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { generateSipReport } from '../utils/excel-generator';
@@ -23,6 +23,8 @@ type SortKey = 'name' | 'monthlyAmount' | 'currentNav' | 'totalUnits' | 'totalIn
 type SortDir = 'asc' | 'desc';
 
 export const SipsPage: React.FC = () => {
+  const sipApi = useSipApi();
+  const isLocalMode = useIsLocalMode();
   const [sips, setSips] = useState<Sip[]>([]);
   const [summary, setSummary] = useState<SipSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -221,11 +223,11 @@ export const SipsPage: React.FC = () => {
               <Button variant="danger" size="sm" iconLeft={<Trash2 size={16} />} onClick={handleBulkDelete} isLoading={isBulkLoading}>Delete</Button>
             </>
           )}
-          <Button variant="outline" iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />} onClick={handleRefreshNavs} disabled={isRefreshing}>
+          {!isLocalMode && <Button variant="outline" iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />} onClick={handleRefreshNavs} disabled={isRefreshing}>
             {isRefreshing ? 'Refreshing…' : 'Refresh NAVs'}
-          </Button>
+          </Button>}
           <Button variant="outline" iconLeft={<Download size={18} />} onClick={handleExportExcel}>Export</Button>
-          <Button variant="outline" iconLeft={<Upload size={18} />} onClick={() => setIsImportDialogOpen(true)}>Import Statement</Button>
+          {!isLocalMode && <Button variant="outline" iconLeft={<Upload size={18} />} onClick={() => setIsImportDialogOpen(true)}>Import Statement</Button>}
           <Button iconLeft={<Plus size={18} />} onClick={() => { setFormKey(prev => prev + 1); setIsAddDialogOpen(true); }}>Add SIP</Button>
         </div>
       </div>
@@ -367,7 +369,7 @@ export const SipsPage: React.FC = () => {
         <SipForm key={`add-sip-form-${formKey}`} onSubmit={handleAddSip} onCancel={() => setIsAddDialogOpen(false)} isLoading={isSubmitting} />
       </Dialog>
 
-      <StatementUploadDialog isOpen={isImportDialogOpen} onClose={(success) => { setIsImportDialogOpen(false); if (success) loadSips(); }} />
+      {!isLocalMode && <StatementUploadDialog isOpen={isImportDialogOpen} onClose={(success) => { setIsImportDialogOpen(false); if (success) loadSips(); }} />}
     </div>
   );
 };

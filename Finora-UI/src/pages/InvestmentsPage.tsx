@@ -11,7 +11,7 @@ import { StatementUploadDialog } from '../components/StatementUploadDialog';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Pagination } from '../components/ui/Pagination';
 import { Investment, InvestmentSummary } from '../types/Investment';
-import { investmentApi } from '../api/investmentApi';
+import { useInvestmentApi, useIsLocalMode } from '../utils/data-context';
 import { formatCurrency, formatPercentage, getStatusColorClass } from '../utils/formatters';
 import { PieChart } from '../components/charts/PieChart';
 import { generateInvestmentReport } from '../utils/excel-generator';
@@ -23,6 +23,8 @@ type SortKey = 'name' | 'currentPrice' | 'quantity' | 'value' | 'profitLoss' | '
 type SortDir = 'asc' | 'desc';
 
 export const InvestmentsPage: React.FC = () => {
+  const investmentApi = useInvestmentApi();
+  const isLocalMode = useIsLocalMode();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [summary, setSummary] = useState<InvestmentSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,11 +216,11 @@ export const InvestmentsPage: React.FC = () => {
               <Button variant="danger" size="sm" iconLeft={<Trash2 size={16} />} onClick={handleBulkDelete} isLoading={isBulkLoading}>Delete</Button>
             </>
           )}
-          <Button variant="outline" iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />} onClick={handleRefreshPrices} disabled={isRefreshing}>
+          {!isLocalMode && <Button variant="outline" iconLeft={<RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />} onClick={handleRefreshPrices} disabled={isRefreshing}>
             {isRefreshing ? 'Refreshing…' : 'Refresh Prices'}
-          </Button>
+          </Button>}
           <Button variant="outline" iconLeft={<Download size={18} />} onClick={handleExportExcel}>Export</Button>
-          <Button variant="outline" iconLeft={<Upload size={18} />} onClick={() => setIsImportDialogOpen(true)}>Import Statement</Button>
+          {!isLocalMode && <Button variant="outline" iconLeft={<Upload size={18} />} onClick={() => setIsImportDialogOpen(true)}>Import Statement</Button>}
           <Button iconLeft={<Plus size={18} />} onClick={() => { setFormKey(prev => prev + 1); setIsAddDialogOpen(true); }}>Add Investment</Button>
         </div>
       </div>
@@ -341,7 +343,7 @@ export const InvestmentsPage: React.FC = () => {
         <InvestmentForm key={`add-investment-form-${formKey}`} onSubmit={handleAddInvestment} onCancel={() => setIsAddDialogOpen(false)} isLoading={isSubmitting} />
       </Dialog>
 
-      <StatementUploadDialog isOpen={isImportDialogOpen} onClose={(success) => { setIsImportDialogOpen(false); if (success) loadInvestments(); }} />
+      {!isLocalMode && <StatementUploadDialog isOpen={isImportDialogOpen} onClose={(success) => { setIsImportDialogOpen(false); if (success) loadInvestments(); }} />}
     </div>
   );
 };

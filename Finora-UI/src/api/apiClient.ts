@@ -42,8 +42,8 @@ apiClient.interceptors.response.use(
       if (status === 401) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem("auth_user");
-        if (!window.location.pathname.startsWith("/login")) {
-          window.location.href = "/login";
+        if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/welcome")) {
+          window.location.href = "/welcome";
         }
       } else if (status === 403) {
         toast.error("Forbidden.");
