@@ -51,25 +51,6 @@ async function saveDraftToIDB(data: VaultData): Promise<void> {
   });
 }
 
-async function loadDraftFromIDB(): Promise<VaultData | null> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE);
-      }
-    };
-    req.onsuccess = () => {
-      const tx = req.result.transaction(IDB_STORE, 'readonly');
-      const getReq = tx.objectStore(IDB_STORE).get(IDB_KEY);
-      getReq.onsuccess = () => resolve(getReq.result ?? null);
-      getReq.onerror = () => reject(getReq.error);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
-
 async function clearDraftFromIDB(): Promise<void> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
@@ -154,7 +135,7 @@ export const LocalVaultProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     if ('showSaveFilePicker' in window) {
       try {
-        const handle = await (window as any).showSaveFilePicker({
+        const handle = await (window as unknown as { showSaveFilePicker: (opts: object) => Promise<FileSystemFileHandle> }).showSaveFilePicker({
           suggestedName: `finora-vault-${new Date().toISOString().slice(0, 10)}.enc`,
           types: [{ description: 'Finora Vault', accept: { 'application/octet-stream': ['.enc'] } }],
         });
@@ -164,8 +145,8 @@ export const LocalVaultProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setFileHandle(handle);
         setIsDirty(false);
         return;
-      } catch (e: any) {
-        if (e.name === 'AbortError') return;
+      } catch (e: unknown) {
+        if ((e as { name?: string }).name === 'AbortError') return;
       }
     }
 

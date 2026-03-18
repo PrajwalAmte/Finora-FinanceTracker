@@ -172,7 +172,7 @@ export function useInvestmentApi(): typeof investmentApi {
       return updated ?? {} as Investment;
     },
 
-    sellUnits: async (id: number, quantity: number, _price: number) => {
+    sellUnits: async (id: number, quantity: number, _: number) => {
       let result: Investment | null = null;
       vault.updateInvestments(prev => {
         return prev.reduce<Investment[]>((acc, inv) => {
