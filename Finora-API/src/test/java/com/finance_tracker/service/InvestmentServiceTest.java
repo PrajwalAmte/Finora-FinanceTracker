@@ -282,13 +282,8 @@ class InvestmentServiceTest {
 
     @Test
     void getTotalInvestmentValueExcluding_excludesMatchingIds() {
-        Investment i1 = buildInvestment(1L, USER_ID, "A.NS");
-        i1.setQuantity(new BigDecimal("10"));
-        i1.setCurrentPrice(new BigDecimal("100"));
-        Investment i2 = buildInvestment(2L, USER_ID, "B.NS");
-        i2.setQuantity(new BigDecimal("5"));
-        i2.setCurrentPrice(new BigDecimal("200"));
-        when(investmentRepository.findByUserId(USER_ID)).thenReturn(List.of(i1, i2));
+        when(investmentRepository.sumCurrentValueByUserIdExcluding(USER_ID, List.of(2L)))
+                .thenReturn(new BigDecimal("1000.00"));
 
         BigDecimal result = investmentService.getTotalInvestmentValueExcluding(List.of(2L));
 
@@ -297,15 +292,8 @@ class InvestmentServiceTest {
 
     @Test
     void getTotalProfitLossExcluding_excludesMatchingIds() {
-        Investment i1 = buildInvestment(1L, USER_ID, "A.NS");
-        i1.setQuantity(new BigDecimal("10"));
-        i1.setPurchasePrice(new BigDecimal("100"));
-        i1.setCurrentPrice(new BigDecimal("110"));
-        Investment i2 = buildInvestment(2L, USER_ID, "B.NS");
-        i2.setQuantity(new BigDecimal("5"));
-        i2.setPurchasePrice(new BigDecimal("200"));
-        i2.setCurrentPrice(new BigDecimal("150"));
-        when(investmentRepository.findByUserId(USER_ID)).thenReturn(List.of(i1, i2));
+        when(investmentRepository.sumProfitLossByUserIdExcluding(USER_ID, List.of(2L)))
+                .thenReturn(new BigDecimal("100.00"));
 
         BigDecimal result = investmentService.getTotalProfitLossExcluding(List.of(2L));
 

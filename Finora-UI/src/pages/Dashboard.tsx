@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TrendingUp, CreditCard, DollarSign, ArrowRight } from 'lucide-react';
 import { DashboardMetricCard } from '../components/dashboard/DashboardMetricCard';
@@ -10,12 +10,15 @@ import { WelcomeOnboarding, QuickActions } from '../components/dashboard/Welcome
 import { ComprehensiveFinanceSummary } from '../api/summaryApi';
 import { useSummaryApi } from '../utils/data-context';
 
+const DASHBOARD_CACHE_KEY = 'dashboard_summary';
+
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const summaryApi = useSummaryApi();
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<ComprehensiveFinanceSummary | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const fetchId = useRef(0);
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
     return {
@@ -26,15 +29,44 @@ export const Dashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    const currentFetchId = ++fetchId.current;
+    const dateKey = `${dateRange.startDate}_${dateRange.endDate}`;
+    let hasCachedData = false;
+
+    try {
+      const cached = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.dateKey === dateKey) {
+          setSummary(parsed.data);
+          setIsLoading(false);
+          hasCachedData = true;
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+
+    if (!hasCachedData) {
+      setIsLoading(true);
+    }
+
     const fetchData = async () => {
       try {
-        setIsLoading(true);
         const result = await summaryApi.getComprehensiveSummary(dateRange.startDate, dateRange.endDate);
+        if (fetchId.current !== currentFetchId) return;
         setSummary(result);
+        try {
+          sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ data: result, dateKey }));
+        } catch {
+          // ignore quota errors
+        }
       } catch {
         // Error handled by apiClient interceptor
       } finally {
-        setIsLoading(false);
+        if (fetchId.current === currentFetchId) {
+          setIsLoading(false);
+        }
       }
     };
     fetchData();

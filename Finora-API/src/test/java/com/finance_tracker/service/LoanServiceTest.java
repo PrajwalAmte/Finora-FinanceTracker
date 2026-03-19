@@ -242,18 +242,14 @@ class LoanServiceTest {
 
     @Test
     void getTotalLoanBalance_sumsCurrentBalances() {
-        Loan l1 = buildLoan(1L, USER_ID);
-        l1.setCurrentBalance(new BigDecimal("50000.00"));
-        Loan l2 = buildLoan(2L, USER_ID);
-        l2.setCurrentBalance(new BigDecimal("30000.00"));
-        when(loanRepository.findByUserId(USER_ID)).thenReturn(List.of(l1, l2));
+        when(loanRepository.sumCurrentBalanceByUserId(USER_ID)).thenReturn(new BigDecimal("80000.00"));
 
         assertThat(loanService.getTotalLoanBalance()).isEqualByComparingTo("80000.00");
     }
 
     @Test
     void getTotalLoanBalance_noLoans_returnsZero() {
-        when(loanRepository.findByUserId(USER_ID)).thenReturn(List.of());
+        when(loanRepository.sumCurrentBalanceByUserId(USER_ID)).thenReturn(BigDecimal.ZERO);
 
         assertThat(loanService.getTotalLoanBalance()).isEqualByComparingTo(BigDecimal.ZERO);
     }

@@ -1,6 +1,5 @@
 package com.finance_tracker.service;
 
-import com.finance_tracker.model.Investment;
 import com.finance_tracker.model.Sip;
 import com.finance_tracker.repository.InvestmentRepository;
 import com.finance_tracker.repository.SipRepository;
@@ -100,49 +99,26 @@ public class SipService {
     }
 
     public BigDecimal getTotalSipValue() {
-        List<Sip> sips = getAllSips();
-
-        BigDecimal standaloneValue = sips.stream()
-                .filter(sip -> sip.getInvestmentId() == null)
-                .map(Sip::getCurrentValue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        List<Long> linkedIds = sips.stream()
-                .filter(sip -> sip.getInvestmentId() != null)
-                .map(Sip::getInvestmentId)
-                .toList();
-        BigDecimal linkedValue = investmentRepository.findAllById(linkedIds).stream()
-                .map(Investment::getCurrentValue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        Long userId = resolveUserId();
+        BigDecimal standaloneValue = sipRepository.sumStandaloneCurrentValueByUserId(userId);
+        List<Long> linkedIds = sipRepository.findLinkedInvestmentIdsByUserId(userId);
+        if (linkedIds.isEmpty()) return standaloneValue;
+        BigDecimal linkedValue = investmentRepository.sumCurrentValueByIds(linkedIds);
         return standaloneValue.add(linkedValue);
     }
 
     public BigDecimal getTotalSipInvestment() {
-        List<Sip> sips = getAllSips();
-
-        BigDecimal standalone = sips.stream()
-                .filter(sip -> sip.getInvestmentId() == null)
-                .map(sip -> sip.getTotalInvested() != null ? sip.getTotalInvested() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        List<Long> linkedIds = sips.stream()
-                .filter(sip -> sip.getInvestmentId() != null)
-                .map(Sip::getInvestmentId)
-                .toList();
-        BigDecimal linked = investmentRepository.findAllById(linkedIds).stream()
-                .map(inv -> inv.getQuantity().multiply(inv.getPurchasePrice())
-                        .setScale(2, RoundingMode.HALF_UP))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        Long userId = resolveUserId();
+        BigDecimal standalone = sipRepository.sumStandaloneTotalInvestedByUserId(userId);
+        List<Long> linkedIds = sipRepository.findLinkedInvestmentIdsByUserId(userId);
+        if (linkedIds.isEmpty()) return standalone;
+        BigDecimal linked = investmentRepository.sumCostBasisByIds(linkedIds);
         return standalone.add(linked);
     }
 
     public List<Long> getLinkedInvestmentIds() {
-        return getAllSips().stream()
-                .filter(sip -> sip.getInvestmentId() != null)
-                .map(Sip::getInvestmentId)
-                .toList();
+        Long userId = resolveUserId();
+        return sipRepository.findLinkedInvestmentIdsByUserId(userId);
     }
 
     @Transactional

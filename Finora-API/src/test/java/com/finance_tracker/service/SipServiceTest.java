@@ -245,44 +245,26 @@ class SipServiceTest {
 
     @Test
     void getTotalSipValue_standaloneOnly_sumsCurrentValue() {
-        Sip s = buildSip(1L, USER_ID);
-        s.setInvestmentId(null);
-        s.setTotalUnits(new BigDecimal("10.00"));
-        s.setCurrentNav(new BigDecimal("100.00"));
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s));
+        when(sipRepository.sumStandaloneCurrentValueByUserId(USER_ID)).thenReturn(new BigDecimal("1000.00"));
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of());
 
         assertThat(sipService.getTotalSipValue()).isEqualByComparingTo("1000.00");
     }
 
     @Test
     void getTotalSipValue_linkedOnly_usesInvestmentCurrentValue() {
-        Sip s = buildSip(1L, USER_ID);
-        s.setInvestmentId(10L);
-        s.setTotalUnits(BigDecimal.ZERO);
-        s.setCurrentNav(BigDecimal.ZERO);
-
-        Investment inv = buildInvestment(10L, new BigDecimal("2000.00"));
-
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s));
-        when(investmentRepository.findAllById(List.of(10L))).thenReturn(List.of(inv));
+        when(sipRepository.sumStandaloneCurrentValueByUserId(USER_ID)).thenReturn(BigDecimal.ZERO);
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of(10L));
+        when(investmentRepository.sumCurrentValueByIds(List.of(10L))).thenReturn(new BigDecimal("2000.00"));
 
         assertThat(sipService.getTotalSipValue()).isEqualByComparingTo("2000.00");
     }
 
     @Test
     void getTotalSipValue_mixed_addsBoth() {
-        Sip standalone = buildSip(1L, USER_ID);
-        standalone.setInvestmentId(null);
-        standalone.setTotalUnits(new BigDecimal("5.00"));
-        standalone.setCurrentNav(new BigDecimal("100.00"));
-
-        Sip linked = buildSip(2L, USER_ID);
-        linked.setInvestmentId(10L);
-
-        Investment inv = buildInvestment(10L, new BigDecimal("3000.00"));
-
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(standalone, linked));
-        when(investmentRepository.findAllById(List.of(10L))).thenReturn(List.of(inv));
+        when(sipRepository.sumStandaloneCurrentValueByUserId(USER_ID)).thenReturn(new BigDecimal("500.00"));
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of(10L));
+        when(investmentRepository.sumCurrentValueByIds(List.of(10L))).thenReturn(new BigDecimal("3000.00"));
 
         assertThat(sipService.getTotalSipValue()).isEqualByComparingTo("3500.00");
     }
@@ -291,37 +273,25 @@ class SipServiceTest {
 
     @Test
     void getTotalSipInvestment_standalone_usesTotalInvested() {
-        Sip s = buildSip(1L, USER_ID);
-        s.setInvestmentId(null);
-        s.setTotalInvested(new BigDecimal("12000.00"));
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s));
+        when(sipRepository.sumStandaloneTotalInvestedByUserId(USER_ID)).thenReturn(new BigDecimal("12000.00"));
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of());
 
         assertThat(sipService.getTotalSipInvestment()).isEqualByComparingTo("12000.00");
     }
 
     @Test
     void getTotalSipInvestment_standalone_nullTotalInvested_usesZero() {
-        Sip s = buildSip(1L, USER_ID);
-        s.setInvestmentId(null);
-        s.setTotalInvested(null);
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s));
+        when(sipRepository.sumStandaloneTotalInvestedByUserId(USER_ID)).thenReturn(BigDecimal.ZERO);
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of());
 
         assertThat(sipService.getTotalSipInvestment()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
     void getTotalSipInvestment_linked_usesQtyTimesPrice() {
-        Sip s = buildSip(1L, USER_ID);
-        s.setInvestmentId(10L);
-
-        Investment inv = new Investment();
-        inv.setId(10L);
-        inv.setQuantity(new BigDecimal("20.00"));
-        inv.setPurchasePrice(new BigDecimal("50.00"));
-        inv.setCurrentPrice(new BigDecimal("80.00"));
-
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s));
-        when(investmentRepository.findAllById(List.of(10L))).thenReturn(List.of(inv));
+        when(sipRepository.sumStandaloneTotalInvestedByUserId(USER_ID)).thenReturn(BigDecimal.ZERO);
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of(10L));
+        when(investmentRepository.sumCostBasisByIds(List.of(10L))).thenReturn(new BigDecimal("1000.00"));
 
         assertThat(sipService.getTotalSipInvestment()).isEqualByComparingTo("1000.00");
     }
@@ -330,11 +300,7 @@ class SipServiceTest {
 
     @Test
     void getLinkedInvestmentIds_returnsLinkedIds() {
-        Sip s1 = buildSip(1L, USER_ID);
-        s1.setInvestmentId(10L);
-        Sip s2 = buildSip(2L, USER_ID);
-        s2.setInvestmentId(null);
-        when(sipRepository.findByUserId(USER_ID)).thenReturn(List.of(s1, s2));
+        when(sipRepository.findLinkedInvestmentIdsByUserId(USER_ID)).thenReturn(List.of(10L));
 
         assertThat(sipService.getLinkedInvestmentIds()).containsExactly(10L);
     }

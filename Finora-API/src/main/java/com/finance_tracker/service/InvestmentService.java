@@ -117,17 +117,19 @@ public class InvestmentService {
     }
 
     public BigDecimal getTotalInvestmentValueExcluding(List<Long> excludeIds) {
-        return getAllInvestments().stream()
-                .filter(inv -> inv.getId() == null || !excludeIds.contains(inv.getId()))
-                .map(Investment::getCurrentValue)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Long userId = resolveUserId();
+        if (excludeIds == null || excludeIds.isEmpty()) {
+            return investmentRepository.sumCurrentValueByUserId(userId);
+        }
+        return investmentRepository.sumCurrentValueByUserIdExcluding(userId, excludeIds);
     }
 
     public BigDecimal getTotalProfitLossExcluding(List<Long> excludeIds) {
-        return getAllInvestments().stream()
-                .filter(inv -> inv.getId() == null || !excludeIds.contains(inv.getId()))
-                .map(Investment::getProfitLoss)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Long userId = resolveUserId();
+        if (excludeIds == null || excludeIds.isEmpty()) {
+            return investmentRepository.sumProfitLossByUserId(userId);
+        }
+        return investmentRepository.sumProfitLossByUserIdExcluding(userId, excludeIds);
     }
 
     @Transactional

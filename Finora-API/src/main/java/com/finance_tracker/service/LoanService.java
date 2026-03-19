@@ -95,9 +95,8 @@ public class LoanService {
     }
 
     public BigDecimal getTotalLoanBalance() {
-        return getAllLoans().stream()
-                .map(Loan::getCurrentBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Long userId = resolveUserId();
+        return loanRepository.sumCurrentBalanceByUserId(userId);
     }
 
     // Calculate EMI using the formula: P * r * (1+r)^n / ((1+r)^n - 1)

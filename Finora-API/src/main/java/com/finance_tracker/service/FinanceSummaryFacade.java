@@ -5,27 +5,37 @@ import com.finance_tracker.dto.InvestmentSummaryDTO;
 import com.finance_tracker.dto.LoanSummaryDTO;
 import com.finance_tracker.dto.SipSummaryDTO;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
 public class FinanceSummaryFacade {
-    
-    private static final Logger logger = LoggerFactory.getLogger(FinanceSummaryFacade.class);
-    
+
     private final ExpenseService expenseService;
     private final InvestmentService investmentService;
     private final LoanService loanService;
     private final SipService sipService;
 
-    public ComprehensiveFinanceSummary getComprehensiveSummary(LocalDate startDate, LocalDate endDate) {
-        logger.info("Generating comprehensive finance summary");
+    private <T> CompletableFuture<T> runAsync(Supplier<T> supplier) {
+        SecurityContext context = SecurityContextHolder.getContext();
+        return CompletableFuture.supplyAsync(() -> {
+            SecurityContextHolder.setContext(context);
+            try {
+                return supplier.get();
+            } finally {
+                SecurityContextHolder.clearContext();
+            }
+        });
+    }
 
+    public ComprehensiveFinanceSummary getComprehensiveSummary(LocalDate startDate, LocalDate endDate) {
         if (startDate == null) {
             startDate = LocalDate.now().withDayOfMonth(1);
         }
@@ -33,21 +43,28 @@ public class FinanceSummaryFacade {
             endDate = LocalDate.now();
         }
 
-        ExpenseSummaryDTO expenseSummary = getExpenseSummary(startDate, endDate);
-        InvestmentSummaryDTO investmentSummary = getInvestmentSummary();
-        LoanSummaryDTO loanSummary = getLoanSummary();
-        SipSummaryDTO sipSummary = getSipSummary();
+        final LocalDate start = startDate;
+        final LocalDate end = endDate;
 
-        // investmentSummary.totalValue = non-SIP investments only (SIP-linked MF rows are excluded).
-        // sipSummary.totalCurrentValue  = linked MF investment values + standalone SIP values.
-        // Together they cover all holdings exactly once.
+        CompletableFuture<ExpenseSummaryDTO> expenseFuture = runAsync(() -> getExpenseSummary(start, end));
+        CompletableFuture<InvestmentSummaryDTO> investmentFuture = runAsync(this::getInvestmentSummary);
+        CompletableFuture<LoanSummaryDTO> loanFuture = runAsync(this::getLoanSummary);
+        CompletableFuture<SipSummaryDTO> sipFuture = runAsync(this::getSipSummary);
+        CompletableFuture<BigDecimal> avgExpenseFuture = runAsync(() -> expenseService.getAverageMonthlyExpense(null));
+
+        CompletableFuture.allOf(expenseFuture, investmentFuture, loanFuture, sipFuture, avgExpenseFuture).join();
+
+        ExpenseSummaryDTO expenseSummary = expenseFuture.join();
+        InvestmentSummaryDTO investmentSummary = investmentFuture.join();
+        LoanSummaryDTO loanSummary = loanFuture.join();
+        SipSummaryDTO sipSummary = sipFuture.join();
+        BigDecimal averageMonthlyExpense = avgExpenseFuture.join();
+
         BigDecimal totalAssets = investmentSummary.getTotalValue()
                 .add(sipSummary.getTotalCurrentValue());
         BigDecimal totalLiabilities = loanSummary.getTotalBalance();
         BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
 
-        BigDecimal averageMonthlyExpense = expenseService.getAverageMonthlyExpense(null);
-        
         return ComprehensiveFinanceSummary.builder()
                 .expenseSummary(expenseSummary)
                 .investmentSummary(investmentSummary)
@@ -71,8 +88,7 @@ public class FinanceSummaryFacade {
     }
 
     public InvestmentSummaryDTO getInvestmentSummary() {
-        // Exclude SIP-linked MF investments — their value is counted in sipSummary instead.
-        var sipLinkedIds    = sipService.getLinkedInvestmentIds();
+        var sipLinkedIds = sipService.getLinkedInvestmentIds();
         BigDecimal totalValue      = investmentService.getTotalInvestmentValueExcluding(sipLinkedIds);
         BigDecimal totalProfitLoss = investmentService.getTotalProfitLossExcluding(sipLinkedIds);
         
